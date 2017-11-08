@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.0 / Updated:  9/29/2017 / By:  ZT
+# Version:  1.1 / Updated:  11/7/2017 / By:  ZT
 #
 # Description:  This script handles an in-place upgrade of macOS.
 #
@@ -173,7 +173,9 @@ Your computer will reboot and begin the upgrade process."
 
 # Function for the Reboot Process
 	function rebootProcess {
-		if [[ $exitStatus == 255 || $exitOutput == *"Helper tool crashed..."* ]]; then
+		if [[ $exitStatus == 127 || $exitStatus == 255 || $exitOutput == *"Preparing reboot..."* ]]; then
+				# Exit Code of '255' = Results on Sierra --> High Sierra 
+				# Exit Code of '127' = Results on Mavericks --> High Sierra
 
 			if [[ $statusFV == "true" ]]; then
 				/usr/bin/logger -s "Machine is FileVaulted."

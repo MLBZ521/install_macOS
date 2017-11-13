@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.1 / Updated:  11/7/2017 / By:  ZT
+# Version:  1.2 / Updated:  11/13/2017 / By:  ZT
 #
 # Description:  This script handles an in-place upgrade of macOS.
 #
@@ -31,16 +31,19 @@ case "${4}" in
 		curl --silent https://jss.company.com:8443/icon?id=180 > /private/tmp/downloadIcon.png
 		appName="Install macOS High Sierra.app"
 		downloadTrigger="macOSUpgrade_HighSierra"
+		installSwitch="--agreetolicense"
 		;;
 	"Sierra" | "10.12" )
 		curl --silent https://jss.company.com:8443/icon?id=181 > /private/tmp/downloadIcon.png
 		appName="Install macOS Sierra.app"
 		downloadTrigger="macOSUpgrade_Sierra"
+		installSwitch="--agreetolicense"
 		;;
 	"El Capitan" | "10.11" )
 		curl --silent https://jss.company.com:8443/icon?id=182 > /private/tmp/downloadIcon.png
 		appName="Install OS X El Capitan.app"
 		downloadTrigger="macOSUpgrade_ElCapitan"
+		installSwitch="--volume /"
 		;;
 esac
 
@@ -152,7 +155,7 @@ Your computer will reboot and begin the upgrade process."
 			/usr/bin/defaults write /Library/Preferences/.GlobalPreferences.plist IAQuitInsteadOfReboot -bool YES
 
 			/usr/bin/logger -s "Calling the startosinstall binary..."
-			exitOutput=$("${upgradeOS}/Contents/Resources/startosinstall" --applicationpath "${upgradeOS}" --agreetolicense --nointeraction 2>&1)
+			exitOutput=$("${upgradeOS}/Contents/Resources/startosinstall" --applicationpath "${upgradeOS}" --nointeraction ${installSwitch} 2>&1)
 
 			# Grab the exit value.
 			exitStatus=$?
@@ -163,7 +166,7 @@ Your computer will reboot and begin the upgrade process."
 			/usr/bin/defaults delete /Library/Preferences/.GlobalPreferences.plist IAQuitInsteadOfReboot
 
 			/usr/bin/logger -s "*****  startosinstall exist status was:  ${exitStatus}  *****"
-			/usr/bin/logger -s "*****  The macOS Upgrade has been staged.  *****"
+
 		else
 			/usr/bin/logger -s "A cached macOS Upgrade Package was not found.  Aborting..."
 			/usr/bin/logger -s "*****  In-place macOS Upgrade process:  ERROR  *****"
@@ -175,7 +178,8 @@ Your computer will reboot and begin the upgrade process."
 	function rebootProcess {
 		if [[ $exitStatus == 127 || $exitStatus == 255 || $exitOutput == *"Preparing reboot..."* ]]; then
 				# Exit Code of '255' = Results on Sierra --> High Sierra 
-				# Exit Code of '127' = Results on Mavericks --> High Sierra
+				# Exit Code of '127' = Results on Yosemite --> El Capitan
+			/usr/bin/logger -s "*****  The macOS Upgrade has been successfully staged.  *****"
 
 			if [[ $statusFV == "true" ]]; then
 				/usr/bin/logger -s "Machine is FileVaulted."

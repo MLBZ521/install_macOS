@@ -1,5 +1,7 @@
 # upgrade_macOS
 
+![upgrade_macOS](https://github.com/MLBZ521/upgrade_macOS/blob/master/images/upgrade_macOS.png "upgrade_macOS icon")
+
 The overall scope of this project is to:
   * Allow Full JSS Admins to provide a way for Site Admins to easily make in-place upgrades of macOS available without having to do more than create a policy.
 
@@ -17,7 +19,7 @@ I'm using the `startosinstall` binary which supports the following:
 
 
 **Inspired by**
-  * Numerous discussions on JamfNation on the subjects
+  * Numerous discussions on JamfNation on the subject
   * Several scripts and code snippets posted on JamfNation and GitHub
   * Uses the `IAQuitInsteadOfReboot` preference [documented](https://github.com/munki/munki/blob/master/code/client/munkilib/osinstaller.py) by Greg Neagle
 
@@ -25,7 +27,7 @@ I'm using the `startosinstall` binary which supports the following:
 ## Features ##
 
   * In-place upgrades available via Self Service
-  * Self Service 'download' icons have been uploaded for each macOS version
+  * Self Service 'download' icons [have been uploaded](https://github.com/MLBZ521/upgrade_macOS/tree/master/images/) for each macOS version
   * The Extension Attribute `Latest OS Supported` is available that checks for compatibility with 10.11, 10.12, and 10.13 (supported hardware models, 4GB RAM, and 20GB free space)
   * Will display status messages as the script runs, informing the user of the progress (using `Jamf Helper`)
   * Check to see if the installation files are already present on the machine, if they are, it will not download them from the JSS
@@ -43,7 +45,7 @@ I'm using the `startosinstall` binary which supports the following:
 
 Setup required by the Full JSS Admin:
   * Add `upgrade_macOS.sh` to JSS; edit as needed:
-    * OS Icon URLs
+    * [OS Icon URLs](https://github.com/MLBZ521/upgrade_macOS/tree/master/images/)
     * Custom Triggers Used
   * Upload macOS Version Icons
   * Create and upload packages for each OS Version to JSS
@@ -89,3 +91,5 @@ How a Site Admin will use the script:
 
 Logs each step to `system.log`
 
+
+**All icons and logos are property of [Apple](www.apple.com).**

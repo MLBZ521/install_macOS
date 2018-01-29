@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.2 / Updated:  11/13/2017 / By:  ZT
+# Version:  1.2.1 / Updated:  1/29/2017 / By:  ZT
 #
 # Description:  This script handles an in-place upgrade of macOS.
 #
@@ -17,7 +17,7 @@
 # jamfHelper location
 	jamfHelper="/Library/Application Support/JAMF/bin/jamfHelper.app/Contents/MacOS/jamfHelper"
 # Download Cache
-	jamfCache="/Library/Application Support/JAMF/Downloads"
+#	jamfCache="/Library/Application Support/JAMF/Downloads"
 # Check if machine is FileVault enabled
 	statusFV=$(/usr/bin/fdesetup isactive)
 # Check if machine supports authrestart
@@ -189,7 +189,7 @@ Your computer will reboot and begin the upgrade process."
 					/usr/bin/logger -s "Attempting an Authenticated Reboot..."
 					checkAuthRestart=$(/usr/local/jamf/bin/jamf policy -event $authRestartFVTrigger)
 
-					if [[ $checkAuthRestart == *"No policies were found for the ${authRestartFVTrigger} trigger."* ]]; then
+					if [[ $checkAuthRestart == *"No policies were found for the \"${authRestartFVTrigger}\" trigger."* ]]; then
 						# Function manualFileVaultReboot
 							manualFileVaultReboot
 					else

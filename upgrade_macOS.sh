@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.4 / Updated:  5/16/2018 / By:  ZT
+# Version:  1.4.1 / Updated:  5/16/2018 / By:  ZT
 #
 # Description:  This script handles an in-place upgrade of macOS.
 #
@@ -25,6 +25,9 @@
 # Workflow Method
 	methodType="${5}"
 
+# Turn on case-insensitive pattern matching
+shopt -s nocasematch
+
 # Set the variables based on the version that is being provided.
 case "${4}" in
 	"High Sierra" | "10.13" )
@@ -40,7 +43,7 @@ case "${4}" in
 			fileSystemType=$(/usr/sbin/diskutil info / | /usr/bin/awk -F "File System Personality:" '{print $2}' | /usr/bin/xargs)
 
 			if [[ $(/usr/bin/bc <<< "${osVersion} >= 13.4") -eq 1 && "${fileSystemType}" -eq "APFS" ]]; then
-				eraseDisk="--eraseinstall --newvolumename \"macOS HD\""
+				eraseDisk="--eraseinstall --newvolumename \"Macintosh HD\""
 			else
 				/usr/bin/logger -s "Current FileSystem and OS Version is not supported!"
 				exit 1
@@ -65,6 +68,9 @@ case "${4}" in
 		installSwitch="--volume /"
 		;;
 esac
+
+# Turn off case-insensitive pattern matching
+shopt -u nocasematch
 
 ##################################################
 # Setup Functions

@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.3 / Updated:  5/15/2018 / By:  ZT
+# Version:  1.4 / Updated:  5/16/2018 / By:  ZT
 #
 # Description:  This script handles an in-place upgrade of macOS.
 #
@@ -28,10 +28,29 @@
 # Set the variables based on the version that is being provided.
 case "${4}" in
 	"High Sierra" | "10.13" )
+		# macOS High Sierra 10.13 Options:
+		# File System Type?  APFS/HFS+
+		if [[ "${6}" != "" ]]; then
+			fileSystemType="--converttoapfs ${6}"
+		fi
+
+		# Wipe Drive (if supported)?
+		if [[ "${7}" == "Yes" ]]; then
+			osVersion=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F '.' '{print $2"."$3}')
+			fileSystemType=$(/usr/sbin/diskutil info / | /usr/bin/awk -F "File System Personality:" '{print $2}' | /usr/bin/xargs)
+
+			if [[ $(/usr/bin/bc <<< "${osVersion} >= 13.4") -eq 1 && "${fileSystemType}" -eq "APFS" ]]; then
+				eraseDisk="--eraseinstall --newvolumename \"macOS HD\""
+			else
+				/usr/bin/logger -s "Current FileSystem and OS Version is not supported!"
+				exit 1
+			fi
+		fi
+
 		/usr/bin/curl --silent https://jss.company.com:8443/icon?id=180 > /private/tmp/downloadIcon.png
 		appName="Install macOS High Sierra.app"
 		downloadTrigger="macOSUpgrade_HighSierra"
-		installSwitch="--agreetolicense"
+		installSwitch="--agreetolicense ${fileSystemType} ${eraseDisk}"
 		;;
 	"Sierra" | "10.12" )
 		/usr/bin/curl --silent https://jss.company.com:8443/icon?id=181 > /private/tmp/downloadIcon.png
@@ -208,11 +227,11 @@ Your computer will reboot and begin the upgrade process."
 				elif [[ "${methodType}" != "Self Service" ]]; then
 					/usr/bin/logger -s "This system is not on AC Power.  Aborting..."
 					/usr/bin/logger -s "*****  In-place macOS Upgrade process:  ABORTED  *****"
-					exit 1
+					exit 2
 				else
 					/usr/bin/logger -s "User canceled the process.  Aborting..."
 					/usr/bin/logger -s "*****  In-place macOS Upgrade process:  CANCELED  *****"
-					exit 2
+					exit 3
 				fi
 
 				# Give user a few seconds to connect the power adapter before checking again...
@@ -250,7 +269,7 @@ Your computer will reboot and begin the upgrade process."
 		else
 			/usr/bin/logger -s "A cached macOS Upgrade Package was not found.  Aborting..."
 			/usr/bin/logger -s "*****  In-place macOS Upgrade process:  ERROR  *****"
-			exit 3
+			exit 4
 		fi
 	}
 
@@ -295,7 +314,7 @@ Your computer will reboot and begin the upgrade process."
 				inform "Failed"
 
 			/usr/bin/logger -s "*****  In-place macOS Upgrade process:  FAILED  *****"
-			exit 4
+			exit 5
 		fi
 	}
 

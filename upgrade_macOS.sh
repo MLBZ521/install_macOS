@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.4.1 / Updated:  5/16/2018 / By:  ZT
+# Version:  1.5 / Updated:  5/17/2018 / By:  ZT
 #
 # Description:  This script handles an in-place upgrade of macOS.
 #
@@ -92,7 +92,8 @@ inform() {
 					Description="Your machine has been scheduled to for a macOS upgrade, please save all open work and close all applications.  This process may take some time depending on the configuration of your machine.
 Your computer will reboot and begin the upgrade process shortly."
 					Icon="${upgradeOS}/Contents/Resources/ProductPageIcon.icns"
-					extras="-iconSize 100 &"
+					extras=""
+					waitOrGo="Go"
 				;;
 				"Reboot" )
 					## Setup jamfHelper window for a non-FileVaulted Restart message
@@ -100,20 +101,22 @@ Your computer will reboot and begin the upgrade process shortly."
 					Heading="Rebooting System...                      "
 					Description="This machine will reboot in one minute..."
 					Icon="${upgradeOS}/Contents/Resources/ProductPageIcon.icns"
-					extras="-iconSize 100 &"
+					extras=""
+					waitOrGo="Go"
 				;;
 			esac
 		;;
 		"Classroom" )
 			case "${1}" in
-				"Installing" )
+				"Download" )
 					## Setup jamfHelper window for Installing message
 					windowType="fs"
 					Heading="Initializing macOS Upgrade..."
 					Description="This process may take some time depending on the configuration of the machine.
 This computer will reboot and begin the upgrade process shortly."
 					Icon="${upgradeOS}/Contents/Resources/ProductPageIcon.icns"
-					extras="-iconSize 100 &"
+					extras=""
+					waitOrGo="Go"
 				;;
 				"Reboot" )
 					## Setup jamfHelper window for a non-FileVaulted Restart message
@@ -121,7 +124,8 @@ This computer will reboot and begin the upgrade process shortly."
 					Heading="Rebooting System...                      "
 					Description="This machine will reboot in one minute..."
 					Icon="${upgradeOS}/Contents/Resources/ProductPageIcon.icns"
-					extras="-iconSize 100 &"
+					extras=""
+					waitOrGo="Go"
 				;;
 			esac
 		;;
@@ -134,7 +138,8 @@ This computer will reboot and begin the upgrade process shortly."
 					Description="This process may potentially take 30 minutes or more depending on your connection speed.
 Once downloaded, you will be prompted to continue."
 					Icon="/private/tmp/downloadIcon.png"
-					extras="-iconSize 100 -button1 OK &"
+					extras="-button1 OK"
+					waitOrGo="Go"
 				;;
 				"DownloadComplete" )
 					## Setup jamfHelper window for Download Complete message
@@ -147,6 +152,7 @@ Once downloaded, you will be prompted to continue."
 Click OK when you are ready to continue; once you do so, the upgrade process will begin."
 					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ToolbarInfo.icns"
 					extras="-button1 OK"
+					waitOrGo="Wait"
 				;;
 				"PowerMessage" )
 					## Setup jamfHelper window for AC Power Required message
@@ -156,7 +162,8 @@ Click OK when you are ready to continue; once you do so, the upgrade process wil
 
 Press 'OK' when you have connected your power adapter."
 					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/AlertCautionIcon.icns"
-					extras="-iconSize 100 -button1 \"OK\" -button2 \"Cancel\" -defaultButton 1"
+					extras="-button1 \"OK\" -button2 \"Cancel\" -defaultButton 1"
+					waitOrGo="Wait"
 				;;
 				"Installing" )
 					## Setup jamfHelper window for Installing message
@@ -165,7 +172,8 @@ Press 'OK' when you have connected your power adapter."
 					Description="This process may take some time depending on the configuration of your machine.
 Your computer will reboot and begin the upgrade process."
 					Icon="${upgradeOS}/Contents/Resources/ProductPageIcon.icns"
-					extras="-iconSize 100 &"
+					extras=""
+					waitOrGo="Go"
 				;;
 				"ManualFV" )
 					## Setup jamfHelper window for Manual FileVault Restart message
@@ -173,7 +181,8 @@ Your computer will reboot and begin the upgrade process."
 					Heading="Reboot Required                      "
 					Description="For the upgrade to continue, you will need to unlock the FileVault encrypted disk on this machine after the pending reboot."
 					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/FileVaultIcon.icns"
-					extras="-iconSize 100 -timeout 58"
+					extras="-timeout 58"
+					waitOrGo="Wait"
 				;;
 				"Reboot" )
 					## Setup jamfHelper window for a non-FileVaulted Restart message
@@ -181,7 +190,8 @@ Your computer will reboot and begin the upgrade process."
 					Heading="Rebooting System...                      "
 					Description="This machine will reboot in one minute..."
 					Icon="${upgradeOS}/Contents/Resources/ProductPageIcon.icns"
-					extras="-iconSize 100 -button1 \"OK\" -defaultButton 1"
+					extras="-button1 \"OK\" -defaultButton 1"
+					waitOrGo="Wait"
 				;;
 				"Failed" )
 					## Setup jamfHelper window for Failed message
@@ -189,14 +199,24 @@ Your computer will reboot and begin the upgrade process."
 					Heading="Failed to install the macOS Upgrade..."
 					Description="If you continue to have issues, please contact your Deskside Support for assistance."
 					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/AlertStopIcon.icns"
-					extras="-iconSize 100 -button1 \"OK\" -defaultButton 1"
+					extras="-button1 \"OK\" -defaultButton 1"
+					waitOrGo="Wait"
 				;;
 			esac
 		;;
 	esac
 
-	"${jamfHelper}" -windowType "${windowType}" -title "${title}" -icon "${Icon}" -heading "${Heading}" -description "${Description}" $extras 2>&1 > /dev/null
+	jamfHelperType "${waitOrGo}"
 }
+
+# Function that calls JamfHelper and either puts it in the background or wait for user interaction.
+	jamfHelperType() {
+		if [[ "${1}" == "Go" ]]; then
+			"${jamfHelper}" -windowType "${windowType}" -title "${title}" -icon "${Icon}" -heading "${Heading}" -description "${Description}" -iconSize 300 $extras & 2>&1 > /dev/null
+		else
+			"${jamfHelper}" -windowType "${windowType}" -title "${title}" -icon "${Icon}" -heading "${Heading}" -description "${Description}" -iconSize 300 $extras 2>&1 > /dev/null
+		fi	
+	}
 
 # Function to Download the installer if needed.
 	downloadInstaller() {

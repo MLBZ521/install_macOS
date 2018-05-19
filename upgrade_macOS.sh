@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.5 / Updated:  5/17/2018 / By:  ZT
+# Version:  1.5.1 / Updated:  5/18/2018 / By:  ZT
 #
 # Description:  This script handles an in-place upgrade of macOS.
 #
@@ -190,8 +190,8 @@ Your computer will reboot and begin the upgrade process."
 					Heading="Rebooting System...                      "
 					Description="This machine will reboot in one minute..."
 					Icon="${upgradeOS}/Contents/Resources/ProductPageIcon.icns"
-					extras="-button1 \"OK\" -defaultButton 1"
-					waitOrGo="Wait"
+					extras="-timeout 58 -button1 \"OK\" -defaultButton 1"
+					waitOrGo="Go"
 				;;
 				"Failed" )
 					## Setup jamfHelper window for Failed message

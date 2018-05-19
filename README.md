@@ -5,7 +5,7 @@
 The overall scope of this project is to:
   * Allow Full JSS Admins to provide a way for Site Admins to easily make in-place upgrades of macOS available without having to do more than create a policy.
 
-Essentially, this is a script that can be used to initiate an upgrade of macOS via Self Service.  The script is added to a policy and will call pre-configured policies that complete the upgrade task.  
+Essentially, this is a script that can be used to initiate an upgrade of macOS via Self Service (or force an upgrade on clients).  The script is added to a policy and will call pre-configured policies that complete the upgrade task.
 
 I'm using the `startosinstall` binary which supports the following:
   * Upgrading to macOS 10.13, 10.12, and 10.11
@@ -14,8 +14,8 @@ I'm using the `startosinstall` binary which supports the following:
 
 **Features that I may add in the future**
   * ~~Support for 10.12 and possibly 10.11~~ - Added!
-  * A 'forced' upgrade option (currently this is configured for Self Service Only)
-  * APFS conversion option (i.e. do or do not convert to APFS)
+  * ~~A 'forced' upgrade option (currently this is configured for Self Service Only)~~ - Added!
+  * ~~APFS conversion option (i.e. do or do not convert to APFS)~~ - Added!
 
 
 **Inspired by**
@@ -26,19 +26,22 @@ I'm using the `startosinstall` binary which supports the following:
 
 ## Features ##
 
-  * In-place upgrades available via Self Service
+  * In-place upgrades available via Self Service, Force Upgrade, or for a "Classroom" Upgrade
   * Self Service 'download' icons [have been uploaded](https://github.com/MLBZ521/upgrade_macOS/tree/master/images/) for each macOS version
   * The Extension Attribute `Latest OS Supported` is available that checks for compatibility with 10.11, 10.12, and 10.13 (supported hardware models, 4GB RAM, and 20GB free space)
   * Will display status messages as the script runs, informing the user of the progress (using `Jamf Helper`)
   * Check to see if the installation files are already present on the machine, if they are, it will not download them from the JSS
   * Requires AC Power before beginning the installation phase
   * **Will** upgrade the firmware (which is required for APFS conversion in High Sierra)
-  * Performs the 'default' install configuration (i.e.  SSD is converted to APFS, HDD is not converted -- APFS is not *currently* supported on Fusion drives)
+  * Allows for the FileSystem type to be selected:  default (i.e.  SSD is converted to APFS, HDD is not converted -- APFS is not *currently* supported on Fusion drives), convert to APFS, or do not convert to APFS
+  * Allows for the option to wipe the drive and reload fresh (10.13.4+ features)
   * If the machine is FileVaulted and supports performing an Authenticated Reboot, it will perform one; if not, it will schedule a reboot in one minute (only works if the JSS has the FileVault Key)
   * If the script fails, the exit codes should be logged to the JSS for review; exit codes are:
-    * Exit 101 - User canceled the process during the Power Adapter check phase
-    * Exit 102 - Could not locate the installation package during the install phase
-    * Exit 103 - Unexpected exit code from the installation phase
+    * Exit 1 - Current FileSystem and OS Version does not support the --eraseinstall and --newvolumename switches
+    * Exit 2 - On a non-Self Service Method, if the system is not on AC Power
+    * Exit 3 - User canceled the process during the Power Adapter check phase
+    * Exit 4 - Could not locate the installation package during the install phase
+    * Exit 5 - Unexpected exit code from the installation phase
 
 
 ## Setup ##
@@ -62,7 +65,19 @@ How a Site Admin will use the script:
     * "`High Sierra`" or "`10.13`"
     * "`Sierra`" or "`10.12`"
     * "`El Capitan`" or "`10.11`"
-
+  * Set the Method Type:
+    * "`Self Service`"
+    * "`Forced`"
+    * "`Classroom`"
+  * High Sierra Features:
+    * Set File System Type (Convert to APFS?)
+      * "`Yes`"
+      * "`No`"
+      * Nothing (Or Default)
+    * High Sierra 10.13.4 + Features:
+      * Erase Disk
+        * "`Yes`"
+        * "`No`"  
 
 ## Logic ##
 
@@ -92,4 +107,4 @@ How a Site Admin will use the script:
 Logs each step to `system.log`
 
 
-**All icons and logos are property of [Apple](www.apple.com).**
+**All icons and logos are property of [Apple](http://www.apple.com).**

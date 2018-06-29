@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.6 / Updated:  6/28/2018 / By:  ZT
+# Version:  1.6.1 / Updated:  6/29/2018 / By:  ZT
 #
 # Description:  This script handles an in-place upgrades or clean installs of macOS.
 #
@@ -40,45 +40,8 @@
 	authRestartFV=$(/usr/bin/fdesetup supportsauthrestart)
 # Workflow Method
 	methodType="${5}"
-
-# Turn on case-insensitive pattern matching
-shopt -s nocasematch
-
-# Set the variables based on the version that is being provided.
-case "${4}" in
-	"Mojave" | "10.14" )
-		downloadIcon=${mojaveIconID}
-		appName="Install macOS Mojave.app"
-		downloadTrigger="${mojaveDownloadTrigger}"
-		installSwitch+="--agreetolicense"
-
-		# Function modernFeatures
-			modernFeatures
-	"High Sierra" | "10.13" )
-		downloadIcon=$highSierraIconID
-		appName="Install macOS High Sierra.app"
-		downloadTrigger="${highSierraDownloadTrigger}"
-		installSwitch+="--agreetolicense"
-
-		# Function modernFeatures
-			modernFeatures
-	;;
-	"Sierra" | "10.12" )
-		downloadIcon=$sierraIconID
-		appName="Install macOS Sierra.app"
-		downloadTrigger="${sierraDownloadTrigger}"
-		installSwitch+="--agreetolicense"
-	;;
-	"El Capitan" | "10.11" )
-		downloadIcon=$elCapitanIconID
-		appName="Install OS X El Capitan.app"
-		downloadTrigger="${elCapitanDownloadTrigger}"
-		installSwitch+="--volume /"
-	;;
-esac
-
-# Turn off case-insensitive pattern matching
-shopt -u nocasematch
+# Define array to hold the startosinstall arguments
+	installSwitch=()
 
 ##################################################
 # Setup Functions
@@ -88,7 +51,7 @@ modernFeatures() {
 	# macOS High Sierra 10.13.0+ Options:
 	# File System Type?  APFS/HFS+
 	if [[ "${6}" != "" ]]; then
-		installSwitch+=" --converttoapfs ${6}"
+		installSwitch+="--converttoapfs ${6}"
 	fi
 
 	# macOS High Sierra 10.13.4+ Options:
@@ -98,7 +61,7 @@ modernFeatures() {
 		fileSystemType=$(/usr/sbin/diskutil info / | /usr/bin/awk -F "File System Personality:" '{print $2}' | /usr/bin/xargs)
 
 		if [[ $(/usr/bin/bc <<< "${osVersion} >= 13.4") -eq 1 && "${fileSystemType}" -eq "APFS" ]]; then
-			installSwitch+=" --eraseinstall --newvolumename \"Macintosh HD\""
+			installSwitch+="--eraseinstall --newvolumename \"Macintosh HD\""
 		else
 			/usr/bin/logger -s "Current FileSystem and OS Version is not supported!"
 			exit 1
@@ -313,7 +276,7 @@ Your computer will reboot and begin the upgrade process."
 			/usr/bin/defaults write /Library/Preferences/.GlobalPreferences.plist IAQuitInsteadOfReboot -bool YES
 
 			/usr/bin/logger -s "Calling the startosinstall binary..."
-			exitOutput=$("${upgradeOS}/Contents/Resources/startosinstall" --applicationpath "${upgradeOS}" --nointeraction $installSwitch 2>&1)
+			exitOutput=$("${upgradeOS}/Contents/Resources/startosinstall" --applicationpath "${upgradeOS}" --nointeraction ${installSwitch[@]} 2>&1)
 
 			# Grab the exit value.
 			exitStatus=$?
@@ -408,6 +371,46 @@ Your computer will reboot and begin the upgrade process."
 
 ##################################################
 # Now that we have our work setup... 
+
+# Turn on case-insensitive pattern matching
+shopt -s nocasematch
+
+# Set the variables based on the version that is being provided.
+case "${4}" in
+	"Mojave" | "10.14" )
+		downloadIcon=${mojaveIconID}
+		appName="Install macOS Mojave.app"
+		downloadTrigger="${mojaveDownloadTrigger}"
+		installSwitch+="--agreetolicense"
+
+		# Function modernFeatures
+			modernFeatures
+	;;
+	"High Sierra" | "10.13" )
+		downloadIcon=$highSierraIconID
+		appName="Install macOS High Sierra.app"
+		downloadTrigger="${highSierraDownloadTrigger}"
+		installSwitch+="--agreetolicense"
+
+		# Function modernFeatures
+			modernFeatures
+	;;
+	"Sierra" | "10.12" )
+		downloadIcon=$sierraIconID
+		appName="Install macOS Sierra.app"
+		downloadTrigger="${sierraDownloadTrigger}"
+		installSwitch+="--agreetolicense"
+	;;
+	"El Capitan" | "10.11" )
+		downloadIcon=$elCapitanIconID
+		appName="Install OS X El Capitan.app"
+		downloadTrigger="${elCapitanDownloadTrigger}"
+		installSwitch+="--volume /"
+	;;
+esac
+
+# Turn off case-insensitive pattern matching
+shopt -u nocasematch
 
 # Download the icon from the JPS
 /usr/bin/curl --silent $jamfPS/icon?id=$downloadIcon > /private/tmp/downloadIcon.png

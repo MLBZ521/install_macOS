@@ -3,13 +3,31 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.5.1 / Updated:  5/18/2018 / By:  ZT
+# Version:  1.6 / Updated:  6/28/2018 / By:  ZT
 #
-# Description:  This script handles an in-place upgrade of macOS.
+# Description:  This script handles an in-place upgrades or clean installs of macOS.
 #
 ###################################################################################################
 
 /usr/bin/logger -s "*****  In-place macOS Upgrade process:  START  *****"
+
+##################################################
+# Define Environmental Variables
+
+# Jamf Pro Server URL
+	jamfPS="https://jss.company.com:8443"
+# Download Icon IDs
+	elCapitanIconID="182"
+	sierraIconID="181"
+	highSierraIconID="180"
+	mojaveIconID="183"
+# Custom Trigger used for FileVault Authenticated Reboot.
+	authRestartFVTrigger="AuthenticatedRestart"
+# Custom Trigger used for Downloading Installation Media
+	elCapitanDownloadTrigger="macOSUpgrade_ElCapitan"
+	sierraDownloadTrigger="macOSUpgrade_Sierra"
+	highSierraDownloadTrigger="macOSUpgrade_HighSierra"
+	mojaveDownloadTrigger="macOSUpgrade_Mojave"
 
 ##################################################
 # Define Variables
@@ -20,8 +38,6 @@
 	statusFV=$(/usr/bin/fdesetup isactive)
 # Check if machine supports authrestart
 	authRestartFV=$(/usr/bin/fdesetup supportsauthrestart)
-# Custom Trigger used for FileVault Authenticated Reboot.
-	authRestartFVTrigger="AuthenticatedRestart"
 # Workflow Method
 	methodType="${5}"
 
@@ -30,43 +46,35 @@ shopt -s nocasematch
 
 # Set the variables based on the version that is being provided.
 case "${4}" in
+	"Mojave" | "10.14" )
+		downloadIcon=${mojaveIconID}
+		appName="Install macOS Mojave.app"
+		downloadTrigger="${mojaveDownloadTrigger}"
+		installSwitch+="--agreetolicense"
+
+		# Function modernFeatures
+			modernFeatures
 	"High Sierra" | "10.13" )
-		# macOS High Sierra 10.13 Options:
-		# File System Type?  APFS/HFS+
-		if [[ "${6}" != "" ]]; then
-			fileSystemType="--converttoapfs ${6}"
-		fi
-
-		# Wipe Drive (if supported)?
-		if [[ "${7}" == "Yes" ]]; then
-			osVersion=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F '.' '{print $2"."$3}')
-			fileSystemType=$(/usr/sbin/diskutil info / | /usr/bin/awk -F "File System Personality:" '{print $2}' | /usr/bin/xargs)
-
-			if [[ $(/usr/bin/bc <<< "${osVersion} >= 13.4") -eq 1 && "${fileSystemType}" -eq "APFS" ]]; then
-				eraseDisk="--eraseinstall --newvolumename \"Macintosh HD\""
-			else
-				/usr/bin/logger -s "Current FileSystem and OS Version is not supported!"
-				exit 1
-			fi
-		fi
-
-		/usr/bin/curl --silent https://jss.company.com:8443/icon?id=180 > /private/tmp/downloadIcon.png
+		downloadIcon=$highSierraIconID
 		appName="Install macOS High Sierra.app"
-		downloadTrigger="macOSUpgrade_HighSierra"
-		installSwitch="--agreetolicense ${fileSystemType} ${eraseDisk}"
-		;;
+		downloadTrigger="${highSierraDownloadTrigger}"
+		installSwitch+="--agreetolicense"
+
+		# Function modernFeatures
+			modernFeatures
+	;;
 	"Sierra" | "10.12" )
-		/usr/bin/curl --silent https://jss.company.com:8443/icon?id=181 > /private/tmp/downloadIcon.png
+		downloadIcon=$sierraIconID
 		appName="Install macOS Sierra.app"
-		downloadTrigger="macOSUpgrade_Sierra"
-		installSwitch="--agreetolicense"
-		;;
+		downloadTrigger="${sierraDownloadTrigger}"
+		installSwitch+="--agreetolicense"
+	;;
 	"El Capitan" | "10.11" )
-		/usr/bin/curl --silent https://jss.company.com:8443/icon?id=182 > /private/tmp/downloadIcon.png
+		downloadIcon=$elCapitanIconID
 		appName="Install OS X El Capitan.app"
-		downloadTrigger="macOSUpgrade_ElCapitan"
-		installSwitch="--volume /"
-		;;
+		downloadTrigger="${elCapitanDownloadTrigger}"
+		installSwitch+="--volume /"
+	;;
 esac
 
 # Turn off case-insensitive pattern matching
@@ -74,6 +82,29 @@ shopt -u nocasematch
 
 ##################################################
 # Setup Functions
+
+# Functions containing new switches available in 10.13.4+
+modernFeatures() {
+	# macOS High Sierra 10.13.0+ Options:
+	# File System Type?  APFS/HFS+
+	if [[ "${6}" != "" ]]; then
+		installSwitch+=" --converttoapfs ${6}"
+	fi
+
+	# macOS High Sierra 10.13.4+ Options:
+	# Wipe Drive (if supported)?
+	if [[ "${7}" == "Yes" ]]; then
+		osVersion=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F '.' '{print $2"."$3}')
+		fileSystemType=$(/usr/sbin/diskutil info / | /usr/bin/awk -F "File System Personality:" '{print $2}' | /usr/bin/xargs)
+
+		if [[ $(/usr/bin/bc <<< "${osVersion} >= 13.4") -eq 1 && "${fileSystemType}" -eq "APFS" ]]; then
+			installSwitch+=" --eraseinstall --newvolumename \"Macintosh HD\""
+		else
+			/usr/bin/logger -s "Current FileSystem and OS Version is not supported!"
+			exit 1
+		fi
+	fi
+}
 
 # Setup jamfHelper Windows
 inform() {
@@ -200,7 +231,7 @@ Your computer will reboot and begin the upgrade process."
 					Description="If you continue to have issues, please contact your Deskside Support for assistance."
 					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/AlertStopIcon.icns"
 					extras="-button1 \"OK\" -defaultButton 1"
-					waitOrGo="Wait"
+					waitOrGo="Go"
 				;;
 			esac
 		;;
@@ -215,7 +246,7 @@ Your computer will reboot and begin the upgrade process."
 			"${jamfHelper}" -windowType "${windowType}" -title "${title}" -icon "${Icon}" -heading "${Heading}" -description "${Description}" -iconSize 300 $extras & 2>&1 > /dev/null
 		else
 			"${jamfHelper}" -windowType "${windowType}" -title "${title}" -icon "${Icon}" -heading "${Heading}" -description "${Description}" -iconSize 300 $extras 2>&1 > /dev/null
-		fi	
+		fi
 	}
 
 # Function to Download the installer if needed.
@@ -246,9 +277,9 @@ Your computer will reboot and begin the upgrade process."
 				/usr/bin/logger -s "Power Status:  FAILED - AC Power Not Detected"
 				# jamfHelper Plug in Power Adapter prompt
 					inform "PowerMessage"
-					userCanceled="${?}"
+					userCanceled=$?
 
-				if [[ "${userCanceled}" == 0 ]]; then
+				if [[ $userCanceled == 0 ]]; then
 					/usr/bin/logger -s "User clicked OK"
 				elif [[ "${methodType}" != "Self Service" ]]; then
 					/usr/bin/logger -s "This system is not on AC Power.  Aborting..."
@@ -275,12 +306,14 @@ Your computer will reboot and begin the upgrade process."
 
 			# jamfHelper Install prompt
 				inform "Installing"
+				# Get the PID of the Jamf Helper Process incase the installation fails
+				installInformPID=$!
 
 			# Setting this key prevents the 'startosinstall' binary from rebooting the machine.
 			/usr/bin/defaults write /Library/Preferences/.GlobalPreferences.plist IAQuitInsteadOfReboot -bool YES
 
 			/usr/bin/logger -s "Calling the startosinstall binary..."
-			exitOutput=$("${upgradeOS}/Contents/Resources/startosinstall" --applicationpath "${upgradeOS}" --nointeraction ${installSwitch} 2>&1)
+			exitOutput=$("${upgradeOS}/Contents/Resources/startosinstall" --applicationpath "${upgradeOS}" --nointeraction $installSwitch 2>&1)
 
 			# Grab the exit value.
 			exitStatus=$?
@@ -336,6 +369,11 @@ Your computer will reboot and begin the upgrade process."
 				exit 0
 			fi
 		else
+
+			# Kill the Full Screen Install Window
+			/bin/kill $installInformPID
+			wait $! 2>/dev/null
+
 			# jamfHelper Install Failed
 				inform "Failed"
 
@@ -371,10 +409,15 @@ Your computer will reboot and begin the upgrade process."
 ##################################################
 # Now that we have our work setup... 
 
+# Download the icon from the JPS
+/usr/bin/curl --silent $jamfPS/icon?id=$downloadIcon > /private/tmp/downloadIcon.png
+
 # Check if the install .app is already present on the machine (no need to redownload the package).
 if [[ -d "/Applications/${appName}" ]]; then
+	/usr/bin/logger -s "Using installation files found in /Applications"
 	upgradeOS="/Applications/${appName}"
 elif [[ -d "/tmp/${appName}" ]]; then
+	/usr/bin/logger -s "Using installation files found in /tmp"
 	upgradeOS="/tmp/${appName}"
 else
 	# Function downloadInstaller

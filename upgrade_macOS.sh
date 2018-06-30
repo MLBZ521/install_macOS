@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.6.1 / Updated:  6/29/2018 / By:  ZT
+# Version:  1.7 / Updated:  6/29/2018 / By:  ZT
 #
 # Description:  This script handles an in-place upgrades or clean installs of macOS.
 #
@@ -21,7 +21,7 @@
 	sierraIconID="181"
 	highSierraIconID="180"
 	mojaveIconID="183"
-# Custom Trigger used for FileVault Authenticated Reboot.
+# Custom Trigger used for FileVault Authenticated Reboot
 	authRestartFVTrigger="AuthenticatedRestart"
 # Custom Trigger used for Downloading Installation Media
 	elCapitanDownloadTrigger="macOSUpgrade_ElCapitan"
@@ -42,26 +42,30 @@
 	methodType="${5}"
 # Define array to hold the startosinstall arguments
 	installSwitch=()
+# Define the value for the --newvolumename Switch
+	volumeName="Machintosh HD"
 
 ##################################################
 # Setup Functions
 
-# Functions containing new switches available in 10.13.4+
+# Function containing new switches available in 10.13.4+
 modernFeatures() {
+	installSwitch+=("--agreetolicense")
+
 	# macOS High Sierra 10.13.0+ Options:
 	# File System Type?  APFS/HFS+
-	if [[ "${6}" != "" ]]; then
-		installSwitch+="--converttoapfs ${6}"
+	if [[ "${1}" != "" ]]; then
+		installSwitch+=("--converttoapfs ${1}")
 	fi
 
 	# macOS High Sierra 10.13.4+ Options:
 	# Wipe Drive (if supported)?
-	if [[ "${7}" == "Yes" ]]; then
+	if [[ "${2}" == "Yes" ]]; then
 		osVersion=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F '.' '{print $2"."$3}')
 		fileSystemType=$(/usr/sbin/diskutil info / | /usr/bin/awk -F "File System Personality:" '{print $2}' | /usr/bin/xargs)
 
 		if [[ $(/usr/bin/bc <<< "${osVersion} >= 13.4") -eq 1 && "${fileSystemType}" -eq "APFS" ]]; then
-			installSwitch+="--eraseinstall --newvolumename \"Macintosh HD\""
+			installSwitch+=("--eraseinstall --newvolumename")
 		else
 			/usr/bin/logger -s "Current FileSystem and OS Version is not supported!"
 			exit 1
@@ -273,18 +277,18 @@ Your computer will reboot and begin the upgrade process."
 				installInformPID=$!
 
 			# Setting this key prevents the 'startosinstall' binary from rebooting the machine.
-			/usr/bin/defaults write /Library/Preferences/.GlobalPreferences.plist IAQuitInsteadOfReboot -bool YES
+			/usr/bin/defaults write -globalDomain IAQuitInsteadOfReboot -bool YES
 
 			/usr/bin/logger -s "Calling the startosinstall binary..."
-			exitOutput=$("${upgradeOS}/Contents/Resources/startosinstall" --applicationpath "${upgradeOS}" --nointeraction ${installSwitch[@]} 2>&1)
+			exitOutput=$(eval '"${upgradeOS}"'/Contents/Resources/startosinstall --applicationpath '"${upgradeOS}"' --nointeraction ${installSwitch[@]} '"${volumeName}"' 2>&1)
 
 			# Grab the exit value.
 			exitStatus=$?
 			/usr/bin/logger -s "Exit Status was:  ${exitStatus}"
-			/usr/bin/logger -s "Exit Output was:  ${exitOutput}"
+			/usr/bin/logger -s "Exit Output was:  ${exitOutput%%$'\n'*}"
 
 			# Cleaning up, don't want to leave this key set as it's not documented.
-			/usr/bin/defaults delete /Library/Preferences/.GlobalPreferences.plist IAQuitInsteadOfReboot
+			/usr/bin/defaults delete -globalDomain IAQuitInsteadOfReboot
 
 			/usr/bin/logger -s "*****  startosinstall exist status was:  ${exitStatus}  *****"
 
@@ -381,31 +385,29 @@ case "${4}" in
 		downloadIcon=${mojaveIconID}
 		appName="Install macOS Mojave.app"
 		downloadTrigger="${mojaveDownloadTrigger}"
-		installSwitch+="--agreetolicense"
 
 		# Function modernFeatures
-			modernFeatures
+			modernFeatures $6 $7
 	;;
 	"High Sierra" | "10.13" )
 		downloadIcon=$highSierraIconID
 		appName="Install macOS High Sierra.app"
 		downloadTrigger="${highSierraDownloadTrigger}"
-		installSwitch+="--agreetolicense"
 
 		# Function modernFeatures
-			modernFeatures
+			modernFeatures $6 $7
 	;;
 	"Sierra" | "10.12" )
 		downloadIcon=$sierraIconID
 		appName="Install macOS Sierra.app"
 		downloadTrigger="${sierraDownloadTrigger}"
-		installSwitch+="--agreetolicense"
+		installSwitch+=("--agreetolicense")
 	;;
 	"El Capitan" | "10.11" )
 		downloadIcon=$elCapitanIconID
 		appName="Install OS X El Capitan.app"
 		downloadTrigger="${elCapitanDownloadTrigger}"
-		installSwitch+="--volume /"
+		installSwitch+=("--volume /")
 	;;
 esac
 

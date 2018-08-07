@@ -3,13 +3,13 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.8 / Updated:  8/7/2018 / By:  ZT
+# Version:  1.8.1 / Updated:  8/7/2018 / By:  ZT
 #
 # Description:  This script handles in-place upgrades or clean installs of macOS.
 #
 ###################################################################################################
 
-/usr/bin/logger -s "*****  In-place macOS Upgrade process:  START  *****"
+echo "*****  In-place macOS Upgrade process:  START  *****"
 
 ##################################################
 # Define Environmental Variables
@@ -67,7 +67,7 @@ modernFeatures() {
 		if [[ $(/usr/bin/bc <<< "${osVersion} >= 13.4") -eq 1 && "${fileSystemType}" -eq "APFS" ]]; then
 			installSwitch+=("--eraseinstall --newvolumename" \'"${volumeName}"\')
 		else
-			/usr/bin/logger -s "Current FileSystem and OS Version is not supported!"
+			echo "Current FileSystem and OS Version is not supported!"
 			exit 1
 		fi
 	fi
@@ -222,9 +222,9 @@ Your computer will reboot and begin the upgrade process."
 			inform "Download"
 
 		# Call jamf Download Policy
-			/usr/bin/logger -s "Downloading the macOS Upgrade Package from Jamf..."
+			echo "Downloading the macOS Upgrade Package from Jamf..."
 				/usr/local/jamf/bin/jamf policy -event $downloadTrigger
-			/usr/bin/logger -s "Upgrade Package download complete!"
+			echo "Upgrade Package download complete!"
 
 		# jamfHelper Download Complete prompt
 			inform "DownloadComplete"
@@ -238,23 +238,23 @@ Your computer will reboot and begin the upgrade process."
 
 			if [[ ${powerSource} == *"AC Power"* ]]; then
 				powerStatus="PASSED"
-				/usr/bin/logger -s "Power Status:  PASSED - AC Power Detected"
+				echo "Power Status:  PASSED - AC Power Detected"
 			else
 				powerStatus="FAILED"
-				/usr/bin/logger -s "Power Status:  FAILED - AC Power Not Detected"
+				echo "Power Status:  FAILED - AC Power Not Detected"
 				# jamfHelper Plug in Power Adapter prompt
 					inform "PowerMessage"
 					userCanceled=$?
 
 				if [[ $userCanceled == 0 ]]; then
-					/usr/bin/logger -s "User clicked OK"
+					echo "User clicked OK"
 				elif [[ "${methodType}" != "Self Service" ]]; then
-					/usr/bin/logger -s "This system is not on AC Power.  Aborting..."
-					/usr/bin/logger -s "*****  In-place macOS Upgrade process:  ABORTED  *****"
+					echo "This system is not on AC Power.  Aborting..."
+					echo "*****  In-place macOS Upgrade process:  ABORTED  *****"
 					exit 2
 				else
-					/usr/bin/logger -s "User canceled the process.  Aborting..."
-					/usr/bin/logger -s "*****  In-place macOS Upgrade process:  CANCELED  *****"
+					echo "User canceled the process.  Aborting..."
+					echo "*****  In-place macOS Upgrade process:  CANCELED  *****"
 					exit 3
 				fi
 
@@ -279,22 +279,22 @@ Your computer will reboot and begin the upgrade process."
 			# Setting this key prevents the 'startosinstall' binary from rebooting the machine.
 			/usr/bin/defaults write -globalDomain IAQuitInsteadOfReboot -bool YES
 
-			/usr/bin/logger -s "Calling the startosinstall binary..."
+			echo "Calling the startosinstall binary..."
 			exitOutput=$(eval '"${upgradeOS}"'/Contents/Resources/startosinstall --applicationpath '"${upgradeOS}"' --nointeraction ${installSwitch[@]} 2>&1)
 
 			# Grab the exit value.
 			exitStatus=$?
-			/usr/bin/logger -s "Exit Status was:  ${exitStatus}"
-			/usr/bin/logger -s "Exit Output was:  ${exitOutput%%$'\n'*}"
+			echo "Exit Status was:  ${exitStatus}"
+			echo "Exit Output was:  ${exitOutput%%$'\n'*}"
 
 			# Cleaning up, don't want to leave this key set as it's not documented.
 			/usr/bin/defaults delete -globalDomain IAQuitInsteadOfReboot
 
-			/usr/bin/logger -s "*****  startosinstall exist status was:  ${exitStatus}  *****"
+			echo "*****  startosinstall exist status was:  ${exitStatus}  *****"
 
 		else
-			/usr/bin/logger -s "A cached macOS Upgrade Package was not found.  Aborting..."
-			/usr/bin/logger -s "*****  In-place macOS Upgrade process:  ERROR  *****"
+			echo "A cached macOS Upgrade Package was not found.  Aborting..."
+			echo "*****  In-place macOS Upgrade process:  ERROR  *****"
 			exit 4
 		fi
 	}
@@ -304,20 +304,20 @@ Your computer will reboot and begin the upgrade process."
 		if [[ $exitStatus == 127 || $exitStatus == 255 || $exitOutput == *"Preparing reboot..."* ]]; then
 				# Exit Code of '255' = Results on Sierra --> High Sierra 
 				# Exit Code of '127' = Results on Yosemite --> El Capitan
-			/usr/bin/logger -s "*****  The macOS Upgrade has been successfully staged.  *****"
+			echo "*****  The macOS Upgrade has been successfully staged.  *****"
 
 			if [[ $statusFV == "true" ]]; then
-				/usr/bin/logger -s "Machine is FileVaulted."
+				echo "Machine is FileVaulted."
 
 				if [[ $authRestartFV == "true" ]]; then
-					/usr/bin/logger -s "Attempting an Authenticated Reboot..."
+					echo "Attempting an Authenticated Reboot..."
 					checkAuthRestart=$(/usr/local/jamf/bin/jamf policy -event $authRestartFVTrigger)
 
 					if [[ $checkAuthRestart == *"No policies were found for the \"${authRestartFVTrigger}\" trigger."* ]]; then
 						# Function manualFileVaultReboot
 							manualFileVaultReboot
 					else
-						/usr/bin/logger -s "*****  In-place macOS Upgrade process:  SUCCESS  *****"
+						echo "*****  In-place macOS Upgrade process:  SUCCESS  *****"
 						exit 0
 					fi
 				else
@@ -325,13 +325,13 @@ Your computer will reboot and begin the upgrade process."
 						manualFileVaultReboot
 				fi
 			else
-				/usr/bin/logger -s "Machine is not FileVaulted."
+				echo "Machine is not FileVaulted."
 					inform "Reboot"
 
 				# Function scheduleReboot
 					scheduleReboot
 
-				/usr/bin/logger -s "*****  In-place macOS Upgrade process:  SUCCESS  *****"
+				echo "*****  In-place macOS Upgrade process:  SUCCESS  *****"
 				exit 0
 			fi
 		else
@@ -343,14 +343,14 @@ Your computer will reboot and begin the upgrade process."
 			# jamfHelper Install Failed
 				inform "Failed"
 
-			/usr/bin/logger -s "*****  In-place macOS Upgrade process:  FAILED  *****"
+			echo "*****  In-place macOS Upgrade process:  FAILED  *****"
 			exit 5
 		fi
 	}
 
 # Function for unsupported FileVault Authenticated Reboot.
 	manualFileVaultReboot() {
-		/usr/bin/logger -s "Machine does not support FileVault Authenticated Reboots..."
+		echo "Machine does not support FileVault Authenticated Reboots..."
 
 		# jamfHelper Unsupported FileVault Authenticated Reboot prompt
 			inform "ManualFV"
@@ -358,16 +358,16 @@ Your computer will reboot and begin the upgrade process."
 		# Function scheduleReboot
 		scheduleReboot
 
-		/usr/bin/logger -s "*****  In-place macOS Upgrade process:  SUCCESS  *****"
+		echo "*****  In-place macOS Upgrade process:  SUCCESS  *****"
 		exit 0
 	}
 
 # Function to Schedule a Reboot in one minute.
 	scheduleReboot() {
-		/usr/bin/logger -s "Scheduling a reboot one minute from now..."
+		echo "Scheduling a reboot one minute from now..."
 		rebootTime=$(/bin/date -v "+1M" "+%H:%M")
 
-		/usr/bin/logger -s "Rebooting at $rebootTime"
+		echo "Rebooting at $rebootTime"
 		/sbin/shutdown -r $rebootTime
 	}
 
@@ -375,8 +375,8 @@ Your computer will reboot and begin the upgrade process."
 # Now that we have our work setup... 
 
 if [[ -z $4 || -z $5 ]]; then
-	/usr/bin/logger -s "Failed to provide required options!"
-	/usr/bin/logger -s "*****  In-place macOS Upgrade process:  FAILED  *****"
+	echo "Failed to provide required options!"
+	echo "*****  In-place macOS Upgrade process:  FAILED  *****"
 	exit 6
 fi
 
@@ -423,10 +423,10 @@ shopt -u nocasematch
 
 # Check if the install .app is already present on the machine (no need to redownload the package).
 if [[ -d "/Applications/${appName}" ]]; then
-	/usr/bin/logger -s "Using installation files found in /Applications"
+	echo "Using installation files found in /Applications"
 	upgradeOS="/Applications/${appName}"
 elif [[ -d "/tmp/${appName}" ]]; then
-	/usr/bin/logger -s "Using installation files found in /tmp"
+	echo "Using installation files found in /tmp"
 	upgradeOS="/tmp/${appName}"
 else
 	# Function downloadInstaller

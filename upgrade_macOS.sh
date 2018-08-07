@@ -3,9 +3,9 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.7 / Updated:  6/29/2018 / By:  ZT
+# Version:  1.8 / Updated:  8/7/2018 / By:  ZT
 #
-# Description:  This script handles an in-place upgrades or clean installs of macOS.
+# Description:  This script handles in-place upgrades or clean installs of macOS.
 #
 ###################################################################################################
 
@@ -43,7 +43,7 @@
 # Define array to hold the startosinstall arguments
 	installSwitch=()
 # Define the value for the --newvolumename Switch
-	volumeName="Machintosh HD"
+	volumeName="Macintosh HD"
 
 ##################################################
 # Setup Functions
@@ -65,7 +65,7 @@ modernFeatures() {
 		fileSystemType=$(/usr/sbin/diskutil info / | /usr/bin/awk -F "File System Personality:" '{print $2}' | /usr/bin/xargs)
 
 		if [[ $(/usr/bin/bc <<< "${osVersion} >= 13.4") -eq 1 && "${fileSystemType}" -eq "APFS" ]]; then
-			installSwitch+=("--eraseinstall --newvolumename")
+			installSwitch+=("--eraseinstall --newvolumename" \'"${volumeName}"\')
 		else
 			/usr/bin/logger -s "Current FileSystem and OS Version is not supported!"
 			exit 1
@@ -280,7 +280,7 @@ Your computer will reboot and begin the upgrade process."
 			/usr/bin/defaults write -globalDomain IAQuitInsteadOfReboot -bool YES
 
 			/usr/bin/logger -s "Calling the startosinstall binary..."
-			exitOutput=$(eval '"${upgradeOS}"'/Contents/Resources/startosinstall --applicationpath '"${upgradeOS}"' --nointeraction ${installSwitch[@]} '"${volumeName}"' 2>&1)
+			exitOutput=$(eval '"${upgradeOS}"'/Contents/Resources/startosinstall --applicationpath '"${upgradeOS}"' --nointeraction ${installSwitch[@]} 2>&1)
 
 			# Grab the exit value.
 			exitStatus=$?
@@ -310,7 +310,6 @@ Your computer will reboot and begin the upgrade process."
 				/usr/bin/logger -s "Machine is FileVaulted."
 
 				if [[ $authRestartFV == "true" ]]; then
-
 					/usr/bin/logger -s "Attempting an Authenticated Reboot..."
 					checkAuthRestart=$(/usr/local/jamf/bin/jamf policy -event $authRestartFVTrigger)
 
@@ -360,7 +359,6 @@ Your computer will reboot and begin the upgrade process."
 		scheduleReboot
 
 		/usr/bin/logger -s "*****  In-place macOS Upgrade process:  SUCCESS  *****"
-		
 		exit 0
 	}
 
@@ -375,6 +373,12 @@ Your computer will reboot and begin the upgrade process."
 
 ##################################################
 # Now that we have our work setup... 
+
+if [[ -z $4 || -z $5 ]]; then
+	/usr/bin/logger -s "Failed to provide required options!"
+	/usr/bin/logger -s "*****  In-place macOS Upgrade process:  FAILED  *****"
+	exit 6
+fi
 
 # Turn on case-insensitive pattern matching
 shopt -s nocasematch

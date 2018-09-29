@@ -73,6 +73,24 @@ modernFeatures() {
 	fi
 }
 
+# Create USB Media Function
+createUSB() {
+
+	promptForChoice="tell application (path to frontmost application as text) to choose from list every paragraph of \"${volumeNames}\" with prompt \"Choose the volume to use:\" OK button name \"Select\" cancel button name \"Cancel\""
+	selectedVolumeName=$(/usr/bin/osascript -e "$promptForChoice")
+	echo "Selected Volume:  ${selectedVolumeName}"
+
+	# Handle if the user pushes the cancel button.
+	if [[ $selectedVolumeName == "false" ]]; then
+		echo "A volume selection was not made."
+		createAnother="button returned:No"
+		return
+	fi
+
+exitOutput=$('"${upgradeOS}"'/Contents/Resources/createinstallmedia --volume '"/Volumes/${selectedVolumeName}"' --applicationpath '"${upgradeOS}"' --nointeraction 2>&1)
+
+}
+
 # Setup jamfHelper Windows
 inform() {
 
@@ -199,6 +217,31 @@ Your computer will reboot and begin the upgrade process."
 					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/AlertStopIcon.icns"
 					extras="-button1 \"OK\" -defaultButton 1"
 					waitOrGo="Go"
+				;;
+			esac
+		;;
+		"Create USB" )
+			case "${1}" in 
+				"Download" )
+					## Setup jamfHelper window for Downloading message
+					windowType="hud"
+					Heading="Downloading macOS Upgrade...                               "
+					Description="This process may potentially take 30 minutes or more depending on your connection speed.
+Once downloaded, you will be prompted to continue."
+					Icon="/private/tmp/downloadIcon.png"
+					extras="-button1 OK"
+					waitOrGo="Go"
+				;;
+				"DownloadComplete" )
+					## Setup jamfHelper window for Download Complete message
+					windowType="hud"
+					Heading="Download Complete!                                         "
+					Description="Before continuing, please insert the USB drive(s) you wish to use.
+
+Click OK when you are ready to continue and you will be prompted to select the volume to use."
+					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ToolbarInfo.icns"
+					extras="-button1 OK"
+					waitOrGo="Wait"
 				;;
 			esac
 		;;
@@ -435,9 +478,38 @@ else
 		upgradeOS="/tmp/${appName}"
 fi
 
-# Function powerCheck
-	powerCheck
-# Function installProcess
-	installProcess
-# Function rebootProcess
-	rebootProcess
+# This section handles if we want to create a USB.
+if [[ "${methodType}" == "Create USB" ]]; then
+	# Get a list of all printer configurations.
+		volumeInfo=$(diskutil list -plist external physical | /usr/bin/xmllint --format - | /usr/bin/xpath 'plist/dict/key[text()="VolumesFromDisks"]/following-sibling::array[1]' 2>/dev/null)
+	# Get a list of all Volumes.
+		allVolumes=$(echo $(/usr/bin/printf '%s\n' "$volumeInfo") | LANG=C /usr/bin/sed -e 's/<[^/>]*>//g' | LANG=C /usr/bin/sed -e 's/<[^>]*>/\'$'\n/g')
+	# Get the number of printers.
+		numberOfVolumes=$(echo $(/usr/bin/printf '%s\n' "$volumeInfo") | /usr/bin/xmllint --format - | /usr/bin/xpath 'count(//string)' 2>/dev/null)
+	# Clear the variable, in case we're rerunning the process.
+		unset volumeNames
+
+	# Loop through each printer to only get the printer name and add in it's printer "ID" -- node number in the xml.
+	for ((i=1; i<=$numberOfVolumes; ++i)); do
+		volumeName=$(echo $(/usr/bin/printf '%s\n' "$allVolumes"))
+		volumeNames+=$"${i}) ${volumeName}\n"
+	done
+
+	# Drop the final \n (newline).
+		volumeNames=$(echo -e ${volumeNames} | /usr/bin/perl -pe 'chomp if eof')
+
+	# We prompt to create another printer in the function; either continue create printers or complete script.
+	until [[ $createAnother == "button returned:No" ]]; do
+		# Function createPrinter
+		createUSB
+	done
+
+	exit 0
+else
+	# Function powerCheck
+		powerCheck
+	# Function installProcess
+		installProcess
+	# Function rebootProcess
+		rebootProcess
+fi

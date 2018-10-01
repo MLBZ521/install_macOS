@@ -76,18 +76,42 @@ modernFeatures() {
 # Create USB Media Function
 createUSB() {
 
-	promptForChoice="tell application (path to frontmost application as text) to choose from list every paragraph of \"${volumeNames}\" with prompt \"Choose the volume to use:\" OK button name \"Select\" cancel button name \"Cancel\""
-	selectedVolumeName=$(/usr/bin/osascript -e "$promptForChoice")
-	echo "Selected Volume:  ${selectedVolumeName}"
+	# Confirm the Installation Bundle still exists...
+	if [[ -d "${upgradeOS}" ]]; then
 
-	# Handle if the user pushes the cancel button.
-	if [[ $selectedVolumeName == "false" ]]; then
-		echo "A volume selection was not made."
-		createAnother="button returned:No"
-		return
+		promptForChoice="tell application (path to frontmost application as text) to choose from list every paragraph of \"${volumeNames}\" with prompt \"Choose the volume to use:\" OK button name \"Select\" cancel button name \"Cancel\""
+		selectedVolumeID=$(/usr/bin/osascript -e "$promptForChoice")
+		# echo "Selected Volume:  ${selectedVolumeID}"
+
+		# Handle if the user pushes the cancel button.
+		if [[ $selectedVolumeID == "false" ]]; then
+			echo "A volume selection was not made."
+			createAnother="button returned:No"
+			return
+		fi
+
+		# Get the Volume ID of the selected printer.
+		selectedVolumeName=$(/usr/bin/printf "${selectedVolumeID}" | /usr/bin/awk -F '\\) ' '{print $2}')
+		echo "Selected Volume:  ${selectedVolumeName}"
+
+		# jamfHelper CreatingMedia prompt
+			inform "CreatingMedia"
+
+		echo "Calling the createinstallmedia binary..."
+		exitOutput=$("${upgradeOS}"/Contents/Resources/createinstallmedia --volume "/Volumes/${selectedVolumeName}" --applicationpath "${upgradeOS}" --nointeraction 2>&1)
+
+		# Grab the exit value.
+		exitStatus=$?
+		echo "*****  createinstallmedia exist status was:  ${exitStatus}  *****"
+		echo "Exit Output was:  ${exitOutput%%$'\n'*}"
+
+		# jamfHelper MediaCreated prompt
+			inform "MediaCreated"
+	else
+		echo "A cached macOS Upgrade Package was not found.  Aborting..."
+		echo "*****  In-place macOS Upgrade process:  ERROR  *****"
+		exit 4
 	fi
-
-exitOutput=$('"${upgradeOS}"'/Contents/Resources/createinstallmedia --volume '"/Volumes/${selectedVolumeName}"' --applicationpath '"${upgradeOS}"' --nointeraction 2>&1)
 
 }
 
@@ -242,6 +266,26 @@ Click OK when you are ready to continue and you will be prompted to select the v
 					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ToolbarInfo.icns"
 					extras="-button1 OK"
 					waitOrGo="Wait"
+				;;
+				"CreatingMedia" )
+					## Setup jamfHelper window for Download Complete message
+					windowType="hud"
+					Heading="Creating USB Drive!                                         "
+					Description="The selected drive will be wiped and used to create a USB Installation disk.
+
+Please do not remove the USB drive."
+					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ToolbarInfo.icns"
+					extras="-button1 OK"
+					waitOrGo="Wait"
+				;;
+				"MediaCreated" )
+					## Setup jamfHelper window for Download Complete message
+					windowType="hud"
+					Heading="Installation Drive Completed!                                         "
+					Description="The drive is now ready to install macOS."
+					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ToolbarInfo.icns"
+					extras="-button1 OK"
+					waitOrGo="Go"
 				;;
 			esac
 		;;
@@ -480,25 +524,23 @@ fi
 
 # This section handles if we want to create a USB.
 if [[ "${methodType}" == "Create USB" ]]; then
-	# Get a list of all printer configurations.
+	# Get a list of all externally mounted volumes.
 		volumeInfo=$(diskutil list -plist external physical | /usr/bin/xmllint --format - | /usr/bin/xpath 'plist/dict/key[text()="VolumesFromDisks"]/following-sibling::array[1]' 2>/dev/null)
-	# Get a list of all Volumes.
-		allVolumes=$(echo $(/usr/bin/printf '%s\n' "$volumeInfo") | LANG=C /usr/bin/sed -e 's/<[^/>]*>//g' | LANG=C /usr/bin/sed -e 's/<[^>]*>/\'$'\n/g')
-	# Get the number of printers.
+	# Get the number of externally mounted volumes.
 		numberOfVolumes=$(echo $(/usr/bin/printf '%s\n' "$volumeInfo") | /usr/bin/xmllint --format - | /usr/bin/xpath 'count(//string)' 2>/dev/null)
 	# Clear the variable, in case we're rerunning the process.
 		unset volumeNames
 
-	# Loop through each printer to only get the printer name and add in it's printer "ID" -- node number in the xml.
+	# Loop through each XML string element to only get the volume name and add in an "ID".
 	for ((i=1; i<=$numberOfVolumes; ++i)); do
-		volumeName=$(echo $(/usr/bin/printf '%s\n' "$allVolumes"))
+		volumeName=$(echo $(/usr/bin/printf '%s\n' "$volumeInfo") | /usr/bin/xmllint --format - | /usr/bin/xpath //string[$i] 2>/dev/null | LANG=C /usr/bin/sed -e 's/<[^/>]*>//g' | LANG=C /usr/bin/sed -e 's/<[^>]*>/\'$'\n/g')
 		volumeNames+=$"${i}) ${volumeName}\n"
 	done
 
 	# Drop the final \n (newline).
 		volumeNames=$(echo -e ${volumeNames} | /usr/bin/perl -pe 'chomp if eof')
 
-	# We prompt to create another printer in the function; either continue create printers or complete script.
+	# We prompt to create another USB drive in the function; either continue creating more USB drives or complete script.
 	until [[ $createAnother == "button returned:No" ]]; do
 		# Function createPrinter
 		createUSB

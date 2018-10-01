@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.8.1 / Updated:  8/7/2018 / By:  ZT
+# Version:  1.9 / Updated:  9/30/2018 / By:  ZT
 #
 # Description:  This script handles in-place upgrades or clean installs of macOS.
 #
@@ -55,6 +55,7 @@ modernFeatures() {
 	# macOS High Sierra 10.13.0+ Options:
 	# File System Type?  APFS/HFS+
 	if [[ "${1}" != "" ]]; then
+		echo "Convert to APFS:  ${1}"
 		installSwitch+=("--converttoapfs ${1}")
 	fi
 
@@ -65,9 +66,18 @@ modernFeatures() {
 		fileSystemType=$(/usr/sbin/diskutil info / | /usr/bin/awk -F "File System Personality:" '{print $2}' | /usr/bin/xargs)
 
 		if [[ $(/usr/bin/bc <<< "${osVersion} >= 13.4") -eq 1 && "${fileSystemType}" -eq "APFS" ]]; then
+			echo "Erase Install:  ${2}"
 			installSwitch+=("--eraseinstall --newvolumename" \'"${volumeName}"\')
+
+			# macOS Mojave 10.14.0+ Options:
+			# Preserve Volumes in APFS Container when using --eraseinstall
+			if [[ "${3}" != "" ]]; then
+				echo "Preserve Volumes in APFS Container:  ${3}"
+				installSwitch+=("--preservecontainer ${3}")
+			fi
+
 		else
-			echo "Current FileSystem and OS Version is not supported!"
+			echo "Current FileSystem and/or OS Version is not supported!"
 			exit 1
 		fi
 	fi
@@ -391,7 +401,7 @@ case "${4}" in
 		downloadTrigger="${mojaveDownloadTrigger}"
 
 		# Function modernFeatures
-			modernFeatures $6 $7
+			modernFeatures $6 $7 $8
 	;;
 	"High Sierra" | "10.13" )
 		downloadIcon=$highSierraIconID
@@ -399,7 +409,7 @@ case "${4}" in
 		downloadTrigger="${highSierraDownloadTrigger}"
 
 		# Function modernFeatures
-			modernFeatures $6 $7
+			modernFeatures $6 $7 $8
 	;;
 	"Sierra" | "10.12" )
 		downloadIcon=$sierraIconID

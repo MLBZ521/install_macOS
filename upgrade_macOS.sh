@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.9 / Updated:  9/30/2018 / By:  ZT
+# Version:  1.9.1 / Updated:  10/1/2018 / By:  ZT
 #
 # Description:  This script handles in-place upgrades or clean installs of macOS.
 #
@@ -71,7 +71,7 @@ modernFeatures() {
 
 			# macOS Mojave 10.14.0+ Options:
 			# Preserve Volumes in APFS Container when using --eraseinstall
-			if [[ "${3}" != "" ]]; then
+			if [[ "${3}" == "Yes" ]]; then
 				echo "Preserve Volumes in APFS Container:  ${3}"
 				installSwitch+=("--preservecontainer ${3}")
 			fi

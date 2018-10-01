@@ -76,6 +76,11 @@ modernFeatures() {
 				installSwitch+=("--preservecontainer ${3}")
 			fi
 
+			# macOS 10.13+ option
+			# Check if device is DEP Enrolled
+			if [[ $(/usr/bin/profiles status -type enrollment | /usr/bin/awk -F "DEP Enrolled:  " | /usr/bin/xargs) == "No" ]]; then
+				installSwitch+=("--installpackage /tmp/Jamf_QuickAdd.pkg")
+			fi
 		else
 			echo "Current FileSystem and/or OS Version is not supported!"
 			exit 1

@@ -78,7 +78,7 @@ modernFeatures() {
 
 			# macOS 10.13+ option
 			# Check if device is DEP Enrolled
-			if [[ $(/usr/bin/profiles status -type enrollment | /usr/bin/awk -F "DEP Enrolled:  " | /usr/bin/xargs) == "No" ]]; then
+			if [[ $(/usr/bin/profiles status -type enrollment | /usr/bin/awk -F "Enrolled via DEP: " '{print $2}' | /usr/bin/xargs) == "No" ]]; then
 				installSwitch+=("--installpackage /tmp/Jamf_QuickAdd.pkg")
 			fi
 		else

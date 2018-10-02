@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.11 / Updated:  10/2/2018 / By:  ZT
+# Version:  1.12 / Updated:  10/2/2018 / By:  ZT
 #
 # Description:  This script handles in-place upgrades or clean installs of macOS.
 #
@@ -95,6 +95,51 @@ modernFeatures() {
 			echo "Current FileSystem and/or OS Version is not supported!"
 			exit 1
 		fi
+	fi
+}
+
+# Create USB Media Function
+createUSB() {
+	# Confirm the Installation Bundle still exists...
+	if [[ -d "${upgradeOS}" ]]; then
+
+		promptForChoice="tell application (path to frontmost application as text) to choose from list every paragraph of \"${volumeNames}\" with prompt \"Choose the volume to use:\" OK button name \"Select\" cancel button name \"Cancel\""
+		selectedVolumeID=$(/usr/bin/osascript -e "$promptForChoice")
+		# echo "Selected Volume:  ${selectedVolumeID}"
+
+		# Handle if the user pushes the cancel button.
+		if [[ $selectedVolumeID == "false" ]]; then
+			echo "A volume selection was not made."
+			createAnother="button returned:No"
+			return
+		fi
+
+		# Get the Volume ID of the selected printer.
+		selectedVolumeName=$(/usr/bin/printf "${selectedVolumeID}" | /usr/bin/awk -F '\\) ' '{print $2}')
+		echo "Selected Volume:  ${selectedVolumeName}"
+
+		# macOS High Sierra 10.13 and Mojave 10.14 no longer need the "--applicationpath" switch, including it only if it's not being installed
+		if [[ "${macOSVersion}" == "Sierra" || "${macOSVersion}" == "10.12" || "${macOSVersion}" == "El Capitan" || "${macOSVersion}" == "10.11" ]]; then
+			legacySwitch+=("--applicationpath" \'"${upgradeOS}"\')
+		fi
+
+		# jamfHelper CreatingMedia prompt
+			inform "CreatingMedia"
+
+		echo "Calling the createinstallmedia binary..."
+		exitOutput=$("${upgradeOS}"/Contents/Resources/createinstallmedia --volume "/Volumes/${selectedVolumeName}" --nointeraction "${legacySwitch[@]}" 2>&1)
+
+		# Grab the exit value.
+		exitStatus=$?
+		echo "*****  createinstallmedia exist status was:  ${exitStatus}  *****"
+		echo "Exit Output was:  ${exitOutput%%$'\n'*}"
+
+		# jamfHelper MediaCreated prompt
+			inform "MediaCreated"
+	else
+		echo "A cached macOS Upgrade Package was not found.  Aborting..."
+		echo "*****  In-place macOS Upgrade process:  ERROR  *****"
+		exit 4
 	fi
 }
 
@@ -223,6 +268,51 @@ Your computer will reboot and begin the upgrade process."
 					Description="If you continue to have issues, please contact your Deskside Support for assistance."
 					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/AlertStopIcon.icns"
 					extras="-button1 \"OK\" -defaultButton 1"
+					waitOrGo="Go"
+				;;
+			esac
+		;;
+		"Create USB" )
+			case "${1}" in 
+				"Download" )
+					## Setup jamfHelper window for Downloading message
+					windowType="hud"
+					Heading="Downloading macOS Upgrade...                               "
+					Description="This process may potentially take 30 minutes or more depending on your connection speed.
+Once downloaded, you will be prompted to continue."
+					Icon="/private/tmp/downloadIcon.png"
+					extras="-button1 OK"
+					waitOrGo="Go"
+				;;
+				"DownloadComplete" )
+					## Setup jamfHelper window for Download Complete message
+					windowType="hud"
+					Heading="Download Complete!                                         "
+					Description="Before continuing, please insert the USB drive(s) you wish to use.
+
+Click OK when you are ready to continue and you will be prompted to select the volume to use."
+					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ToolbarInfo.icns"
+					extras="-button1 OK"
+					waitOrGo="Wait"
+				;;
+				"CreatingMedia" )
+					## Setup jamfHelper window for Download Complete message
+					windowType="hud"
+					Heading="Creating USB Drive!                                         "
+					Description="The selected drive will be wiped and used to create a USB Installation disk.
+
+Please do not remove the USB drive."
+					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ToolbarInfo.icns"
+					extras="-button1 OK"
+					waitOrGo="Wait"
+				;;
+				"MediaCreated" )
+					## Setup jamfHelper window for Download Complete message
+					windowType="hud"
+					Heading="Media creation is complete!                                         "
+					Description="The drive is now ready to install macOS."
+					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ToolbarInfo.icns"
+					extras="-button1 OK"
 					waitOrGo="Go"
 				;;
 			esac
@@ -465,9 +555,36 @@ else
 		upgradeOS="/tmp/${appName}"
 fi
 
-# Function powerCheck
-	powerCheck
-# Function installProcess
-	installProcess
-# Function rebootProcess
-	rebootProcess
+# This section handles if we want to create a USB.
+if [[ "${methodType}" == "Create USB" ]]; then
+	# Get a list of all externally mounted volumes.
+		volumeInfo=$(diskutil list -plist external physical | /usr/bin/xmllint --format - | /usr/bin/xpath 'plist/dict/key[text()="VolumesFromDisks"]/following-sibling::array[1]' 2>/dev/null)
+	# Get the number of externally mounted volumes.
+		numberOfVolumes=$(echo $(/usr/bin/printf '%s\n' "$volumeInfo") | /usr/bin/xmllint --format - | /usr/bin/xpath 'count(//string)' 2>/dev/null)
+	# Clear the variable, in case we're rerunning the process.
+		unset volumeNames
+
+	# Loop through each XML string element to only get the volume name and add in an "ID".
+	for ((i=1; i<=$numberOfVolumes; ++i)); do
+		volumeName=$(echo $(/usr/bin/printf '%s\n' "$volumeInfo") | /usr/bin/xmllint --format - | /usr/bin/xpath //string[$i] 2>/dev/null | LANG=C /usr/bin/sed -e 's/<[^/>]*>//g' | LANG=C /usr/bin/sed -e 's/<[^>]*>/\'$'\n/g')
+		volumeNames+=$"${i}) ${volumeName}\n"
+	done
+
+	# Drop the final \n (newline).
+		volumeNames=$(echo -e ${volumeNames} | /usr/bin/perl -pe 'chomp if eof')
+
+	# We prompt to create another USB drive in the function; either continue creating more USB drives or complete script.
+	until [[ $createAnother == "button returned:No" ]]; do
+		# Function createPrinter
+		createUSB
+	done
+
+	exit 0
+else
+	# Function powerCheck
+		powerCheck
+	# Function installProcess
+		installProcess
+	# Function rebootProcess
+		rebootProcess
+fi

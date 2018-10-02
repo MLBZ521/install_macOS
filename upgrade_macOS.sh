@@ -42,6 +42,8 @@ echo "*****  In-place macOS Upgrade process:  START  *****"
 	installSwitch=()
 # Define the value for the --newvolumename Switch
 	volumeName="Macintosh HD"
+# Define the value for the --installpackage Switch
+	packageName="/tmp/Jamf_QuickAdd.pkg"
 # Reassign passed parameters
 	macOSVersion="${4}"
 	methodType="${5}"
@@ -83,7 +85,7 @@ modernFeatures() {
 			# macOS 10.13+ option
 			# Check if device is DEP Enrolled
 			if [[ $(/usr/bin/profiles status -type enrollment | /usr/bin/awk -F "Enrolled via DEP: " '{print $2}' | /usr/bin/xargs) == "No" ]]; then
-				installSwitch+=("--installpackage /tmp/Jamf_QuickAdd.pkg")
+				installSwitch+=("--installpackage ${packageName}")
 			fi
 		else
 			echo "Current FileSystem and/or OS Version is not supported!"

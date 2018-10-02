@@ -1,15 +1,15 @@
 #!/bin/bash
 
 ###################################################################################################
-# Script Name:  upgrade_macOS.sh
+# Script Name:  install_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.12 / Updated:  10/2/2018 / By:  ZT
+# Version:  2.0.0 / Updated:  10/2/2018 / By:  ZT
 #
 # Description:  This script handles in-place upgrades or clean installs of macOS.
 #
 ###################################################################################################
 
-echo "*****  In-place macOS Upgrade process:  START  *****"
+echo "*****  install_macOS process:  START  *****"
 
 ##################################################
 # Define Environmental Variables
@@ -58,8 +58,7 @@ echo "*****  In-place macOS Upgrade process:  START  *****"
 modernFeatures() {
 	installSwitch+=("--agreetolicense")
 
-	# macOS High Sierra 10.13.0+ Options:
-	# File System Type?  APFS/HFS+
+	# macOS High Sierra 10.13.x option; File System Type?  APFS or HFS+
 	if [[ "${1}" != "" && ("${macOSVersion}" == "High Sierra" || "${macOSVersion}" == "10.13") ]]; then
 		echo "Convert to APFS:  ${1}"
 		installSwitch+=("--converttoapfs ${1}")
@@ -82,17 +81,18 @@ modernFeatures() {
 				installSwitch+=("--preservecontainer")
 			else
 				echo "ERROR:  --preservecontainer is only supported on macOS 10.14 Mojave and newer!"
-				echo "*****  In-place macOS Upgrade process:  FAILED  *****"
+				echo "*****  install_macOS process:  FAILED  *****"
 				exit 7
 			fi
 
-			# macOS 10.13+ option
-			# Check if device is DEP Enrolled
+			# macOS High Sierra 10.13+ option
+			# Check if device is DEP Enrolled, if it is not, stage a QuickAdd package to enroll after wiping drive and installing the new OS.
 			if [[ $(/usr/bin/profiles status -type enrollment | /usr/bin/awk -F "Enrolled via DEP: " '{print $2}' | /usr/bin/xargs) == "No" ]]; then
 				installSwitch+=("--installpackage ${packageName}")
 			fi
 		else
-			echo "Current FileSystem and/or OS Version is not supported!"
+			echo "ERROR:  Current FileSystem and/or OS Version is not supported!"
+			echo "*****  install_macOS process:  FAILED  *****"
 			exit 1
 		fi
 	fi
@@ -138,7 +138,7 @@ createUSB() {
 			inform "MediaCreated"
 	else
 		echo "A cached macOS Upgrade Package was not found.  Aborting..."
-		echo "*****  In-place macOS Upgrade process:  ERROR  *****"
+		echo "*****  install_macOS process:  ERROR  *****"
 		exit 4
 	fi
 }
@@ -365,11 +365,11 @@ Please do not remove the USB drive."
 					echo "User clicked OK"
 				elif [[ "${methodType}" != "Self Service" ]]; then
 					echo "This system is not on AC Power.  Aborting..."
-					echo "*****  In-place macOS Upgrade process:  ABORTED  *****"
+					echo "*****  install_macOS process:  ABORTED  *****"
 					exit 2
 				else
 					echo "User canceled the process.  Aborting..."
-					echo "*****  In-place macOS Upgrade process:  CANCELED  *****"
+					echo "*****  install_macOS process:  CANCELED  *****"
 					exit 3
 				fi
 
@@ -383,7 +383,7 @@ Please do not remove the USB drive."
 # Function for the Install Process
 	installProcess() {
 
-		# Use installer to install the cached package
+		# Confirm the Installation Bundle still exists...
 		if [[ -d "${upgradeOS}" ]]; then
 
 			# macOS Mojave 10.14 no longer needs the "--applicationpath" switch, including it only if it's not being installed
@@ -404,17 +404,14 @@ Please do not remove the USB drive."
 
 			# Grab the exit value.
 			exitStatus=$?
-			echo "Exit Status was:  ${exitStatus}"
+			echo "*****  startosinstall exist status was:  ${exitStatus}  *****"
 			echo "Exit Output was:  ${exitOutput%%$'\n'*}"
 
 			# Cleaning up, don't want to leave this key set as it's not documented.
 			/usr/bin/defaults delete -globalDomain IAQuitInsteadOfReboot
-
-			echo "*****  startosinstall exist status was:  ${exitStatus}  *****"
-
 		else
-			echo "A cached macOS Upgrade Package was not found.  Aborting..."
-			echo "*****  In-place macOS Upgrade process:  ERROR  *****"
+			echo "ERROR:  A cached macOS Upgrade Package was not found.  Aborting..."
+			echo "*****  install_macOS process:  FAILED  *****"
 			exit 4
 		fi
 	}
@@ -437,7 +434,7 @@ Please do not remove the USB drive."
 						# Function manualFileVaultReboot
 							manualFileVaultReboot
 					else
-						echo "*****  In-place macOS Upgrade process:  SUCCESS  *****"
+						echo "*****  install_macOS process:  SUCCESS  *****"
 						exit 0
 					fi
 				else
@@ -451,7 +448,7 @@ Please do not remove the USB drive."
 				# Function scheduleReboot
 					scheduleReboot
 
-				echo "*****  In-place macOS Upgrade process:  SUCCESS  *****"
+				echo "*****  install_macOS process:  SUCCESS  *****"
 				exit 0
 			fi
 		else
@@ -463,7 +460,7 @@ Please do not remove the USB drive."
 			# jamfHelper Install Failed
 				inform "Failed"
 
-			echo "*****  In-place macOS Upgrade process:  FAILED  *****"
+			echo "*****  install_macOS process:  FAILED  *****"
 			exit 5
 		fi
 	}
@@ -478,7 +475,7 @@ Please do not remove the USB drive."
 		# Function scheduleReboot
 		scheduleReboot
 
-		echo "*****  In-place macOS Upgrade process:  SUCCESS  *****"
+		echo "*****  install_macOS process:  SUCCESS  *****"
 		exit 0
 	}
 
@@ -496,7 +493,7 @@ Please do not remove the USB drive."
 
 if [[ -z "${macOSVersion}" || -z "${methodType}" ]]; then
 	echo "Failed to provide required options!"
-	echo "*****  In-place macOS Upgrade process:  FAILED  *****"
+	echo "*****  install_macOS process:  FAILED  *****"
 	exit 6
 fi
 
@@ -579,6 +576,7 @@ if [[ "${methodType}" == "Create USB" ]]; then
 		createUSB
 	done
 
+	echo "*****  install_macOS process:  SUCCESS  *****"
 	exit 0
 else
 	# Function powerCheck

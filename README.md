@@ -1,6 +1,11 @@
-# upgrade_macOS
+# install_macOS
 
-![upgrade_macOS](https://github.com/MLBZ521/upgrade_macOS/blob/master/images/upgrade_macOS.png "upgrade_macOS icon")
+I have renamed this project as the overall scope and functionality has changed.
+
+I have added several new pieces of functionality which I will be documenting soon.™
+
+
+![install_macOS](https://github.com/MLBZ521/install_macOS/blob/master/images/upgrade_macOS.png "install_macOS icon")
 
 The overall scope of this project is to:
   * Allow Full JSS Admins to provide a way for Site Admins to easily make in-place upgrades of macOS available without having to do more than create a policy.
@@ -27,7 +32,7 @@ I'm using the `startosinstall` binary which supports the following:
 ## Features ##
 
   * In-place upgrades available via Self Service, Force Upgrade, or for a "Classroom" Upgrade
-  * Self Service 'download' icons [have been uploaded](https://github.com/MLBZ521/upgrade_macOS/tree/master/images/) for each macOS version
+  * Self Service 'download' icons [have been uploaded](https://github.com/MLBZ521/install_macOS/tree/master/images/) for each macOS version
   * The Extension Attribute `Latest OS Supported` is available that reports compatibility for 10.11 and newer OS Versions; checks supported hardware models, 4GB RAM, and 20GB free space)
   * Will display status messages as the script runs, informing the user of the progress (using `Jamf Helper`)
   * Check to see if the installation files are already present on the machine, if they are, it will not download them from the JSS
@@ -50,8 +55,8 @@ I'm using the `startosinstall` binary which supports the following:
 ## Setup ##
 
 Setup required by the Full JSS Admin:
-  * Add `upgrade_macOS.sh` to JSS; edit as needed:
-    * [OS Icon URLs](https://github.com/MLBZ521/upgrade_macOS/tree/master/images/)
+  * Add `install_macOS.sh` to JSS; edit as needed:
+    * [OS Icon URLs](https://github.com/MLBZ521/install_macOS/tree/master/images/)
     * Custom Triggers Used
   * Upload macOS Version Icons
   * Create and upload packages for each OS Version to JSS
@@ -63,7 +68,7 @@ Setup required by the Full JSS Admin:
 ## Usage ##
 
 How a Site Admin will use the script:
-  * Create a Policy using the `upgrade_macOS.sh` script
+  * Create a Policy using the `install_macOS.sh` script
   * Set the OS version, via the Script Parameter, they want to make available; options are:
     * "`High Sierra`" or "`10.13`"
     * "`Sierra`" or "`10.12`"

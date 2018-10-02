@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.9.2 / Updated:  10/2/2018 / By:  ZT
+# Version:  1.10 / Updated:  10/2/2018 / By:  ZT
 #
 # Description:  This script handles in-place upgrades or clean installs of macOS.
 #
@@ -285,6 +285,11 @@ Your computer will reboot and begin the upgrade process."
 		# Use installer to install the cached package
 		if [[ -d "${upgradeOS}" ]]; then
 
+			# macOS Mojave 10.14 no longer needs the "--applicationpath" switch, including it only if it's not being installed
+			if [[ "${macOSVersion}" != "Mojave" || "${macOSVersion}" != "10.14" ]]; then
+				installSwitch+=("--applicationpath" \'"${upgradeOS}"\')
+			fi
+
 			# jamfHelper Install prompt
 				inform "Installing"
 				# Get the PID of the Jamf Helper Process incase the installation fails
@@ -294,7 +299,7 @@ Your computer will reboot and begin the upgrade process."
 			/usr/bin/defaults write -globalDomain IAQuitInsteadOfReboot -bool YES
 
 			echo "Calling the startosinstall binary..."
-			exitOutput=$(eval '"${upgradeOS}"'/Contents/Resources/startosinstall --applicationpath '"${upgradeOS}"' --nointeraction ${installSwitch[@]} 2>&1)
+			exitOutput=$(eval '"${upgradeOS}"'/Contents/Resources/startosinstall --nointeraction ${installSwitch[@]} 2>&1)
 
 			# Grab the exit value.
 			exitStatus=$?

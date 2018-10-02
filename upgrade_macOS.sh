@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  upgrade_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  1.10 / Updated:  10/2/2018 / By:  ZT
+# Version:  1.11 / Updated:  10/2/2018 / By:  ZT
 #
 # Description:  This script handles in-place upgrades or clean installs of macOS.
 #
@@ -38,12 +38,18 @@ echo "*****  In-place macOS Upgrade process:  START  *****"
 	statusFV=$(/usr/bin/fdesetup isactive)
 # Check if machine supports authrestart
 	authRestartFV=$(/usr/bin/fdesetup supportsauthrestart)
-# Workflow Method
-	methodType="${5}"
 # Define array to hold the startosinstall arguments
 	installSwitch=()
 # Define the value for the --newvolumename Switch
 	volumeName="Macintosh HD"
+# Define the value for the --installpackage Switch
+	packageName="/tmp/Jamf_QuickAdd.pkg"
+# Reassign passed parameters
+	macOSVersion="${4}"
+	methodType="${5}"
+	convertAPFS="${6}"
+	eraseinstall="${7}"
+	preserveAPFS="${8}"
 
 ##################################################
 # Setup Functions
@@ -54,7 +60,7 @@ modernFeatures() {
 
 	# macOS High Sierra 10.13.0+ Options:
 	# File System Type?  APFS/HFS+
-	if [[ "${1}" != "" ]]; then
+	if [[ "${1}" != "" && ("${macOSVersion}" == "High Sierra" || "${macOSVersion}" == "10.13") ]]; then
 		echo "Convert to APFS:  ${1}"
 		installSwitch+=("--converttoapfs ${1}")
 	fi
@@ -80,6 +86,11 @@ modernFeatures() {
 				exit 7
 			fi
 
+			# macOS 10.13+ option
+			# Check if device is DEP Enrolled
+			if [[ $(/usr/bin/profiles status -type enrollment | /usr/bin/awk -F "Enrolled via DEP: " '{print $2}' | /usr/bin/xargs) == "No" ]]; then
+				installSwitch+=("--installpackage ${packageName}")
+			fi
 		else
 			echo "Current FileSystem and/or OS Version is not supported!"
 			exit 1
@@ -393,7 +404,7 @@ Your computer will reboot and begin the upgrade process."
 ##################################################
 # Now that we have our work setup... 
 
-if [[ -z $4 || -z $5 ]]; then
+if [[ -z "${macOSVersion}" || -z "${methodType}" ]]; then
 	echo "Failed to provide required options!"
 	echo "*****  In-place macOS Upgrade process:  FAILED  *****"
 	exit 6
@@ -403,14 +414,14 @@ fi
 shopt -s nocasematch
 
 # Set the variables based on the version that is being provided.
-case "${4}" in
+case "${macOSVersion}" in
 	"Mojave" | "10.14" )
 		downloadIcon=${mojaveIconID}
 		appName="Install macOS Mojave.app"
 		downloadTrigger="${mojaveDownloadTrigger}"
 
 		# Function modernFeatures
-			modernFeatures $6 $7 $8
+			modernFeatures "${convertAPFS}" "${eraseinstall}" "${preserveAPFS}"
 	;;
 	"High Sierra" | "10.13" )
 		downloadIcon=$highSierraIconID
@@ -418,7 +429,7 @@ case "${4}" in
 		downloadTrigger="${highSierraDownloadTrigger}"
 
 		# Function modernFeatures
-			modernFeatures $6 $7 $8
+			modernFeatures "${convertAPFS}" "${eraseinstall}" "${preserveAPFS}"
 	;;
 	"Sierra" | "10.12" )
 		downloadIcon=$sierraIconID

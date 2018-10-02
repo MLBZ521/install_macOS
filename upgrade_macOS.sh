@@ -75,7 +75,6 @@ modernFeatures() {
 
 # Create USB Media Function
 createUSB() {
-
 	# Confirm the Installation Bundle still exists...
 	if [[ -d "${upgradeOS}" ]]; then
 
@@ -94,11 +93,16 @@ createUSB() {
 		selectedVolumeName=$(/usr/bin/printf "${selectedVolumeID}" | /usr/bin/awk -F '\\) ' '{print $2}')
 		echo "Selected Volume:  ${selectedVolumeName}"
 
+		# macOS High Sierra 10.13 and Mojave 10.14 no longer need the "--applicationpath" switch, including it only if it's not being installed
+		if [[ "${macOSVersion}" == "Sierra" || "${macOSVersion}" == "10.12" || "${macOSVersion}" == "El Capitan" || "${macOSVersion}" == "10.11" ]]; then
+			legacySwitch+=("--applicationpath" \'"${upgradeOS}"\')
+		fi
+
 		# jamfHelper CreatingMedia prompt
 			inform "CreatingMedia"
 
 		echo "Calling the createinstallmedia binary..."
-		exitOutput=$("${upgradeOS}"/Contents/Resources/createinstallmedia --volume "/Volumes/${selectedVolumeName}" --applicationpath "${upgradeOS}" --nointeraction 2>&1)
+		exitOutput=$("${upgradeOS}"/Contents/Resources/createinstallmedia --volume "/Volumes/${selectedVolumeName}" --nointeraction "${legacySwitch[@]}" 2>&1)
 
 		# Grab the exit value.
 		exitStatus=$?
@@ -112,7 +116,6 @@ createUSB() {
 		echo "*****  In-place macOS Upgrade process:  ERROR  *****"
 		exit 4
 	fi
-
 }
 
 # Setup jamfHelper Windows
@@ -281,7 +284,7 @@ Please do not remove the USB drive."
 				"MediaCreated" )
 					## Setup jamfHelper window for Download Complete message
 					windowType="hud"
-					Heading="Installation Drive Completed!                                         "
+					Heading="Media creation is complete!                                         "
 					Description="The drive is now ready to install macOS."
 					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ToolbarInfo.icns"
 					extras="-button1 OK"

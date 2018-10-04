@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  install_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  2.0.0 / Updated:  10/2/2018 / By:  ZT
+# Version:  2.0.1 / Updated:  10/4/2018 / By:  ZT
 #
 # Description:  This script handles in-place upgrades or clean installs of macOS.
 #
@@ -76,13 +76,15 @@ modernFeatures() {
 
 			# macOS Mojave 10.14.0+ Options:
 			# Preserve Volumes in APFS Container when using --eraseinstall
-			if [[ "${3}" == "Yes" && ("${macOSVersion}" == "Mojave" || "${macOSVersion}" == "10.14") ]]; then
-				echo "Preserve Volumes in APFS Container:  ${3}"
-				installSwitch+=("--preservecontainer")
-			else
-				echo "ERROR:  --preservecontainer is only supported on macOS 10.14 Mojave and newer!"
-				echo "*****  install_macOS process:  FAILED  *****"
-				exit 7
+			if [[ "${3}" == "Yes" ]]; then
+				if [[ "${macOSVersion}" == "Mojave" || "${macOSVersion}" == "10.14" ]]; then
+					echo "Preserve Volumes in APFS Container:  ${3}"
+					installSwitch+=("--preservecontainer")
+				else
+					echo "ERROR:  --preservecontainer is only supported on macOS 10.14 Mojave and newer!"
+					echo "*****  install_macOS process:  FAILED  *****"
+					exit 7
+				fi
 			fi
 
 			# macOS High Sierra 10.13+ option

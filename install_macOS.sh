@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  install_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  2.0.1 / Updated:  10/4/2018 / By:  ZT
+# Version:  2.0.2 / Updated:  10/17/2018 / By:  ZT
 #
 # Description:  This script handles in-place upgrades or clean installs of macOS.
 #
@@ -129,7 +129,7 @@ createUSB() {
 			inform "CreatingMedia"
 
 		echo "Calling the createinstallmedia binary..."
-		exitOutput=$("${upgradeOS}"/Contents/Resources/createinstallmedia --volume "/Volumes/${selectedVolumeName}" --nointeraction "${legacySwitch[@]}" 2>&1)
+		exitOutput=$(eval '"${upgradeOS}"'/Contents/Resources/createinstallmedia --volume '"/Volumes/${selectedVolumeName}"' --nointeraction ${legacySwitch[@]} 2>&1)
 
 		# Grab the exit value.
 		exitStatus=$?
@@ -200,7 +200,7 @@ This computer will reboot and begin the upgrade process shortly."
 			esac
 		;;
 		"Self Service" | "" )
-			case "${1}" in 
+			case "${1}" in
 				"Download" )
 					## Setup jamfHelper window for Downloading message
 					windowType="hud"
@@ -275,7 +275,7 @@ Your computer will reboot and begin the upgrade process."
 			esac
 		;;
 		"Create USB" )
-			case "${1}" in 
+			case "${1}" in
 				"Download" )
 					## Setup jamfHelper window for Downloading message
 					windowType="hud"
@@ -421,7 +421,7 @@ Please do not remove the USB drive."
 # Function for the Reboot Process
 	rebootProcess() {
 		if [[ $exitStatus == 127 || $exitStatus == 255 || $exitOutput == *"Preparing reboot..."* ]]; then
-				# Exit Code of '255' = Results on Sierra --> High Sierra 
+				# Exit Code of '255' = Results on Sierra --> High Sierra
 				# Exit Code of '127' = Results on Yosemite --> El Capitan
 			echo "*****  The macOS Upgrade has been successfully staged.  *****"
 
@@ -491,7 +491,7 @@ Please do not remove the USB drive."
 	}
 
 ##################################################
-# Now that we have our work setup... 
+# Now that we have our work setup...
 
 if [[ -z "${macOSVersion}" || -z "${methodType}" ]]; then
 	echo "Failed to provide required options!"

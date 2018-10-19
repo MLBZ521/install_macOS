@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  install_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  2.0.3 / Updated:  10/18/2018 / By:  ZT
+# Version:  2.1.0 / Updated:  10/18/2018 / By:  ZT
 #
 # Description:  This script handles in-place upgrades or clean installs of macOS.
 #
@@ -15,7 +15,7 @@ echo "*****  install_macOS process:  START  *****"
 # Define Environmental Variables
 
 # Jamf Pro Server URL
-	jamfPS="https://jss.company.com:8443"
+	jamfPS=$(/usr/bin/defaults read /Library/Preferences/com.jamfsoftware.jamf.plist jss_url | /usr/bin/rev | /usr/bin/cut -c 2- | /usr/bin/rev)
 # Download Icon IDs
 	elCapitanIconID="182"
 	sierraIconID="181"
@@ -115,7 +115,7 @@ createUSB() {
 		# Handle if the user pushes the cancel button.
 		if [[ $selectedVolumeID == "false" ]]; then
 			echo "A volume selection was not made."
-			createAnother="button returned:No"
+			# createAnother="button returned:No"
 			return
 		fi
 
@@ -582,10 +582,10 @@ if [[ "${methodType}" == "Create USB" ]]; then
 		volumeNames=$(echo -e ${volumeNames} | /usr/bin/perl -pe 'chomp if eof')
 
 	# We prompt to create another USB drive in the function; either continue creating more USB drives or complete script.
-	until [[ $createAnother == "button returned:No" ]]; do
+	# until [[ $createAnother == "button returned:No" ]]; do
 		# Function createPrinter
 		createUSB
-	done
+	# done
 
 	echo "*****  install_macOS process:  SUCCESS  *****"
 	exit 0

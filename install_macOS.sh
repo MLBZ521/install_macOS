@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  install_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  2.0.2 / Updated:  10/17/2018 / By:  ZT
+# Version:  2.0.3 / Updated:  10/18/2018 / By:  ZT
 #
 # Description:  This script handles in-place upgrades or clean installs of macOS.
 #
@@ -70,7 +70,7 @@ modernFeatures() {
 		osVersion=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F '.' '{print $2"."$3}')
 		fileSystemType=$(/usr/sbin/diskutil info / | /usr/bin/awk -F "File System Personality:" '{print $2}' | /usr/bin/xargs)
 
-		if [[ $(/usr/bin/bc <<< "${osVersion} >= 13.4") -eq 1 && "${fileSystemType}" -eq "APFS" ]]; then
+		if [[ $(/usr/bin/bc <<< "${osVersion} >= 13.4") -eq 1 && "${fileSystemType}" == "APFS" ]]; then
 			echo "Erase Install:  ${2}"
 			installSwitch+=("--eraseinstall --newvolumename" \'"${volumeName}"\')
 
@@ -93,6 +93,9 @@ modernFeatures() {
 				installSwitch+=("--installpackage ${packageName}")
 			fi
 		else
+			# jamfHelper Install Failed
+				inform "Failed"
+
 			echo "ERROR:  Current FileSystem and/or OS Version is not supported!"
 			echo "*****  install_macOS process:  FAILED  *****"
 			exit 1
@@ -139,7 +142,10 @@ createUSB() {
 		# jamfHelper MediaCreated prompt
 			inform "MediaCreated"
 	else
-		echo "A cached macOS Upgrade Package was not found.  Aborting..."
+		# jamfHelper Install Failed
+			inform "Failed"
+
+		echo "A cached macOS install Package was not found.  Aborting..."
 		echo "*****  install_macOS process:  ERROR  *****"
 		exit 4
 	fi
@@ -149,7 +155,7 @@ createUSB() {
 inform() {
 
 	## Title for all jamfHelper windows
-	title="macOS Upgrade"
+	title="macOS Install"
 
 	# Messages are based on the Workflow method chosen...
 	case "${methodType}" in
@@ -158,7 +164,7 @@ inform() {
 				"Installing" )
 					## Setup jamfHelper window for Installing message
 					windowType="hud"
-					Heading="Initializing macOS Upgrade..."
+					Heading="Initializing macOS..."
 					Description="Your machine has been scheduled to for a macOS upgrade, please save all open work and close all applications.  This process may take some time depending on the configuration of your machine.
 Your computer will reboot and begin the upgrade process shortly."
 					Icon="${upgradeOS}/Contents/Resources/ProductPageIcon.icns"
@@ -181,9 +187,9 @@ Your computer will reboot and begin the upgrade process shortly."
 				"Download" )
 					## Setup jamfHelper window for Installing message
 					windowType="fs"
-					Heading="Initializing macOS Upgrade..."
+					Heading="Initializing macOS..."
 					Description="This process may take some time depending on the configuration of the machine.
-This computer will reboot and begin the upgrade process shortly."
+This computer will reboot and begin the install process shortly."
 					Icon="${upgradeOS}/Contents/Resources/ProductPageIcon.icns"
 					extras=""
 					waitOrGo="Go"
@@ -204,7 +210,7 @@ This computer will reboot and begin the upgrade process shortly."
 				"Download" )
 					## Setup jamfHelper window for Downloading message
 					windowType="hud"
-					Heading="Downloading macOS Upgrade...                               "
+					Heading="Downloading macOS installatino media...                               "
 					Description="This process may potentially take 30 minutes or more depending on your connection speed.
 Once downloaded, you will be prompted to continue."
 					Icon="/private/tmp/downloadIcon.png"
@@ -219,7 +225,7 @@ Once downloaded, you will be prompted to continue."
 	- Save all open work and close all applications.
 	- A power adapter is required to continue, connect it now if you are running on battery.
 
-Click OK when you are ready to continue; once you do so, the upgrade process will begin."
+Click OK when you are ready to continue; once you do so, the install process will begin."
 					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ToolbarInfo.icns"
 					extras="-button1 OK"
 					waitOrGo="Wait"
@@ -238,9 +244,9 @@ Press 'OK' when you have connected your power adapter."
 				"Installing" )
 					## Setup jamfHelper window for Installing message
 					windowType="fs"
-					Heading="Initializing macOS Upgrade..."
+					Heading="Initializing macOS..."
 					Description="This process may take some time depending on the configuration of your machine.
-Your computer will reboot and begin the upgrade process."
+Your computer will reboot and begin the install process."
 					Icon="${upgradeOS}/Contents/Resources/ProductPageIcon.icns"
 					extras=""
 					waitOrGo="Go"
@@ -249,7 +255,7 @@ Your computer will reboot and begin the upgrade process."
 					## Setup jamfHelper window for Manual FileVault Restart message
 					windowType="hud"
 					Heading="Reboot Required                      "
-					Description="For the upgrade to continue, you will need to unlock the FileVault encrypted disk on this machine after the pending reboot."
+					Description="For the install to continue, you will need to unlock the FileVault encrypted disk on this machine after the pending reboot."
 					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/FileVaultIcon.icns"
 					extras="-timeout 58"
 					waitOrGo="Wait"
@@ -266,7 +272,7 @@ Your computer will reboot and begin the upgrade process."
 				"Failed" )
 					## Setup jamfHelper window for Failed message
 					windowType="hud"
-					Heading="Failed to install the macOS Upgrade..."
+					Heading="Failed to install macOS..."
 					Description="If you continue to have issues, please contact your Deskside Support for assistance."
 					Icon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/AlertStopIcon.icns"
 					extras="-button1 \"OK\" -defaultButton 1"
@@ -279,7 +285,7 @@ Your computer will reboot and begin the upgrade process."
 				"Download" )
 					## Setup jamfHelper window for Downloading message
 					windowType="hud"
-					Heading="Downloading macOS Upgrade...                               "
+					Heading="Downloading macOS installation media...                               "
 					Description="This process may potentially take 30 minutes or more depending on your connection speed.
 Once downloaded, you will be prompted to continue."
 					Icon="/private/tmp/downloadIcon.png"
@@ -339,9 +345,9 @@ Please do not remove the USB drive."
 			inform "Download"
 
 		# Call jamf Download Policy
-			echo "Downloading the macOS Upgrade Package from Jamf..."
+			echo "Downloading the macOS insatllation package from Jamf..."
 				/usr/local/jamf/bin/jamf policy -event $downloadTrigger
-			echo "Upgrade Package download complete!"
+			echo "Download complete!"
 
 		# jamfHelper Download Complete prompt
 			inform "DownloadComplete"
@@ -412,7 +418,10 @@ Please do not remove the USB drive."
 			# Cleaning up, don't want to leave this key set as it's not documented.
 			/usr/bin/defaults delete -globalDomain IAQuitInsteadOfReboot
 		else
-			echo "ERROR:  A cached macOS Upgrade Package was not found.  Aborting..."
+			# jamfHelper Install Failed
+				inform "Failed"
+
+			echo "ERROR:  A cached macOS installation package was not found.  Aborting..."
 			echo "*****  install_macOS process:  FAILED  *****"
 			exit 4
 		fi
@@ -423,7 +432,7 @@ Please do not remove the USB drive."
 		if [[ $exitStatus == 127 || $exitStatus == 255 || $exitOutput == *"Preparing reboot..."* ]]; then
 				# Exit Code of '255' = Results on Sierra --> High Sierra
 				# Exit Code of '127' = Results on Yosemite --> El Capitan
-			echo "*****  The macOS Upgrade has been successfully staged.  *****"
+			echo "*****  The macOS install has been successfully staged.  *****"
 
 			if [[ $statusFV == "true" ]]; then
 				echo "Machine is FileVaulted."

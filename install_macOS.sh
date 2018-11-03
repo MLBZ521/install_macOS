@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  install_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  2.1.0 / Updated:  10/18/2018 / By:  ZT
+# Version:  2.1.1 / Updated:  11/2/2018 / By:  ZT
 #
 # Description:  This script handles in-place upgrades or clean installs of macOS.
 #
@@ -210,7 +210,7 @@ This computer will reboot and begin the install process shortly."
 				"Download" )
 					## Setup jamfHelper window for Downloading message
 					windowType="hud"
-					Heading="Downloading macOS installatino media...                               "
+					Heading="Downloading macOS installation media...                               "
 					Description="This process may potentially take 30 minutes or more depending on your connection speed.
 Once downloaded, you will be prompted to continue."
 					Icon="/private/tmp/downloadIcon.png"

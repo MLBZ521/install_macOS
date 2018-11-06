@@ -3,7 +3,7 @@
 ###################################################################################################
 # Script Name:  install_macOS.sh
 # By:  Zack Thompson / Created:  9/15/2017
-# Version:  2.1.1 / Updated:  11/2/2018 / By:  ZT
+# Version:  2.1.2 / Updated:  11/5/2018 / By:  ZT
 #
 # Description:  This script handles in-place upgrades or clean installs of macOS.
 #
@@ -395,7 +395,7 @@ Please do not remove the USB drive."
 		if [[ -d "${upgradeOS}" ]]; then
 
 			# macOS Mojave 10.14 no longer needs the "--applicationpath" switch, including it only if it's not being installed
-			if [[ "${macOSVersion}" != "Mojave" || "${macOSVersion}" != "10.14" ]]; then
+			if [[ "${macOSVersion}" == "High Sierra" || "${macOSVersion}" == "10.13" || "${macOSVersion}" == "Sierra" || "${macOSVersion}" == "10.12" || "${macOSVersion}" == "El Capitan" || "${macOSVersion}" == "10.11" ]]; then
 				installSwitch+=("--applicationpath" \'"${upgradeOS}"\')
 			fi
 
